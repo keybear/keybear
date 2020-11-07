@@ -4,6 +4,10 @@
    <img src="assets/logo.svg" alt="Keybear"/>
 
    Self-hosted password server.
+
+   <a href="https://actions-badge.atrox.dev/keybear/keybear/goto"><img src="https://github.com/keybear/keybear/workflows/CI/badge.svg" alt="Build Status"/></a>
+   <a href="https://github.com/keybear/keybear/releases"><img src="https://img.shields.io/crates/d/keybear.svg" alt="Downloads"/></a>
+   <a href="https://crates.io/crates/keybear"><img src="https://img.shields.io/crates/v/keybear.svg" alt="Version"/></a>
 </div>
 
 ## Features

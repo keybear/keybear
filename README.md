@@ -1,2 +1,3 @@
-# keybear-server
-Keybear server
+# keybear
+
+Keybear server.

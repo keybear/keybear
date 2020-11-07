@@ -22,8 +22,16 @@
 
 ### Cargo
 
+Install the keybear binary:
+
 ```bash
 cargo install keybear
+```
+
+Create a symbolic link in `/usr/local/bin`:
+
+```bash
+ln -s ~/.cargo/bin/keybear /usr/local/bin/keybear 
 ```
 
 ## Setup
@@ -52,7 +60,29 @@ printf "HiddenServiceDir /var/lib/tor/keybear\nHiddenServicePort 5219 127.0.0.1:
 Restart Tor:
 
 ```bash
-sudo service tor restart
+sudo systemctl restart tor.service
+```
+
+### Systemd
+
+Copy the service file to `/etc/systemd/system`:
+
+```bash
+sudo cp keybear.service /etc/systemd/system/
+```
+
+Tell systemd to look for the new service file, to start it everytime we boot and to start it now:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable keybear.service
+sudo systemctl start keybear.service
+```
+
+Verify that the service is running:
+
+```bash
+sudo systemctl status keybear.service
 ```
 
 ## Credits

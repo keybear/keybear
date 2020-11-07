@@ -1,0 +1,14 @@
+# vim: ft=systemd
+[Unit]
+Description=Keybear
+After=tor.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/local/keybear
+User=keybear
+Group=keybear
+
+[Install]
+WantedBy=multi-user.target

@@ -9,3 +9,40 @@ Self-hosted keybear server.
 - No complicated router/DNS setup needed, possible to be used behind a firewall
 - Untrackable/obfuscated server IP, perfect for running it at home
 - Low resource usage, can be easily run on a Raspberry Pi
+
+## Installing
+
+### Cargo
+
+```bash
+cargo install keybear
+```
+
+## Setup
+
+For hosting a keybear instance we assume you are using a Debian derived OS (Debian, Ubuntu, Mint, etc.).
+
+### Tor
+
+Install Tor:
+
+```bash
+sudo apt install tor
+```
+
+Configure a hidden Tor onion service, add the following lines to `/etc/tor/torrc`:
+
+```torrc
+HiddenServiceDir /var/lib/tor/keybear
+HiddenServicePort 5219 127.0.0.1:52477
+```
+
+```bash
+printf "HiddenServiceDir /var/lib/tor/keybear\nHiddenServicePort 5219 127.0.0.1:52477" | sudo tee -a /etc/tor/torrc
+```
+
+Restart Tor:
+
+```bash
+sudo service tor restart
+```

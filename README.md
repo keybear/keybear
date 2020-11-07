@@ -1,10 +1,10 @@
-# keybear
-
 <div align="center">
-    <img alt="Keybear Logo" src="https://raw.githubusercontent.com/keybear/keybear/main/assets/icon.svg" />
-</div>
+   <h1>keybear</h1>
 
-Self-hosted keybear server.
+   <img src="assets/logo.svg" alt="Keybear"/>
+
+   Self-hosted password server.
+</div>
 
 ## Features
 
@@ -53,4 +53,4 @@ sudo service tor restart
 
 ## Credits
 
-Logo and name credits go to @rottier.
+Logo and name credits go to [@rottier](https://github.com/rottier).

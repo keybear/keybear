@@ -1,5 +1,9 @@
 # keybear
 
+<div align="center">
+    <img alt="Keybear Logo" src="https://raw.githubusercontent.com/keybear/keybear/main/assets/icon.svg" />
+</div>
+
 Self-hosted keybear server.
 
 ## Features
@@ -46,3 +50,7 @@ Restart Tor:
 ```bash
 sudo service tor restart
 ```
+
+## Credits
+
+Logo and name credits go to @rottier.

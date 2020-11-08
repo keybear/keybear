@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  # Build sources for every OS
+  github_build:
+    name: Build release binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: keybear-x86_64-unknown-linux-gnu
+          - target: x86_64-apple-darwin
+            os: macOS-latest
+            name: keybear-x86_64-apple-darwin
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: keybear-x86_64-pc-windows-msvc.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Build target
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
+
+      - name: Prepare build artifacts [Windows]
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          strip keybear.exe
+          mv keybear.exe ../../../${{ matrix.name }}
+          cd -
+
+      - name: Prepare build artifacts [-nix]
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          strip keybear
+          mv keybear ../../../${{ matrix.name }}
+          cd -
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  # Create GitHub release with Rust build targets and release notes
+  github_release:
+    name: Create GitHub Release
+    needs: github_build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Download releases from github_build
+        uses: actions/download-artifact@v1
+        with:
+          name: keybear-x86_64-unknown-linux-gnu
+          path: .
+      - name: Download releases from github_build
+        uses: actions/download-artifact@v1
+        with:
+          name: keybear-x86_64-apple-darwin
+          path: .
+      - name: Download releases from github_build
+        uses: actions/download-artifact@v1
+        with:
+          name: keybear-x86_64-pc-windows-msvc.exe
+          path: .
+
+      - name: Generate checksums
+        run: for file in keybear-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+
+      - name: Create GitHub release ${{ matrix.target }}
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            keybear-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,7 +3,7 @@ mod store;
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
 use log::{debug, trace};
-use std::io::{Error, Read};
+use std::io::{Read};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpListener};
 
 const DEFAULT_PORT: u16 = 52477;

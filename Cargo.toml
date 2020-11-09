@@ -25,4 +25,7 @@ panic = "abort"
 license-file = ["LICENSE", "0"]
 depends = "$auto, tor"
 maintainer-scripts = "debian/"
+assets = [
+	["debian/tor-service.conf", "/etc/tor/torrc.d/keybear.conf", "755"]
+]
 systemd-units = { enable = true }

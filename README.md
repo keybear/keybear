@@ -34,6 +34,12 @@ Build the installation package:
 cargo deb
 ```
 
+Let Tor load our configuration for the onion service, add the following line to `/etc/tor/torrc`:
+
+```bash
+echo "%include /etc/tor/torrc.d/keybear.conf" | sudo tee -a /etc/tor/torrc
+```
+
 Install the package:
 
 ```bash
@@ -44,6 +50,12 @@ Ensure that the systemd service is running:
 
 ```bash
 sudo systemctl status keybear.service
+```
+
+Restart the Tor service to enable the hidden service:
+
+```bash
+sudo systemctl restart tor.service
 ```
 
 ## Building from source (advanced)
@@ -74,7 +86,7 @@ sudo apt install tor
 
 Configure a hidden Tor onion service, add the following lines to `/etc/tor/torrc`:
 
-```torrc
+```conf
 HiddenServiceDir /var/lib/tor/keybear
 HiddenServicePort 5219 127.0.0.1:52477
 ```

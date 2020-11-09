@@ -2,9 +2,12 @@ mod store;
 
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
-use log::{debug, trace};
-use std::io::{Read};
-use std::net::{Ipv4Addr, SocketAddrV4, TcpListener};
+use log::{debug, error, trace, LevelFilter};
+use std::{
+    io::{Read, Write},
+    net::{Ipv4Addr, SocketAddrV4, TcpListener},
+};
+use syslog::{Facility, Formatter3164};
 
 const DEFAULT_PORT: u16 = 52477;
 
@@ -30,6 +33,10 @@ fn main() -> Result<()> {
 
     let port = matches.value_of_t::<u16>("PORT").unwrap_or(DEFAULT_PORT);
 
+    // Setup logging to syslog
+    syslog::init(Facility::LOG_USER, LevelFilter::Debug, None)
+        .expect("Setting up system log failed");
+
     // Start the Tor server
     let socket = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
     let listener = TcpListener::bind(socket)?;
@@ -37,14 +44,29 @@ fn main() -> Result<()> {
 
     loop {
         // Block until we get a connection
-        let (mut tcp_stream, addr) = listener.accept()?;
+        let (mut stream, addr) = listener.accept()?;
+        if addr.ip() != Ipv4Addr::LOCALHOST {
+            error!("External non-Tor connection initiated from address {:?}, this means your server might be compromised!", addr);
+
+            // We only accept connections from the Tor hidden service on the same machine
+            continue;
+        }
+
         trace!("Connection from {:?} received", addr);
 
         // Get the request
-        let mut input = String::new();
-        let _ = tcp_stream.read_to_string(&mut input)?;
-        println!("{}", input);
-    }
+        let mut buffer = [0; 1024];
+        stream.read(&mut buffer)?;
 
-    Ok(())
+        let (status_line, contents) = if buffer.starts_with(b"GET / HTTP/1.1\r\n") {
+            ("HTTP/1.1 200 OK\r\n\r\n", "Hi there")
+        } else {
+            ("HTTP/1.1 404 NOT FOUND\r\n\r\n", "Sorry not found")
+        };
+
+        let response = format!("{}{}", status_line, contents);
+
+        stream.write(response.as_bytes()).unwrap();
+        stream.flush().unwrap();
+    }
 }

@@ -31,7 +31,7 @@ cargo install keybear
 Create a symbolic link in `/usr/local/bin`:
 
 ```bash
-ln -s ~/.cargo/bin/keybear /usr/local/bin/keybear 
+ln -s $HOME/.cargo/bin/keybear /usr/local/bin/keybear 
 ```
 
 ## Setup
@@ -65,10 +65,10 @@ sudo systemctl restart tor.service
 
 ### Systemd
 
-Copy the service file to `/etc/systemd/system`:
+Copy the service file to `/usr/local/systemd/system`:
 
 ```bash
-sudo cp keybear.service /etc/systemd/system/
+sudo cp keybear.service /usr/local/systemd/system/
 ```
 
 Tell systemd to look for the new service file, to start it everytime we boot and to start it now:

@@ -1,14 +1,28 @@
 # vim: ft=systemd
 [Unit]
 Description=Keybear
-After=tor.service
+After=tor.service network.service
 
 [Service]
 Type=simple
 Restart=always
-ExecStart=/usr/local/keybear
-User=keybear
-Group=keybear
+ExecStart=/usr/local/bin/keybear
+WorkingDirectory=-/var/lib/keybear
+ReadWriteDirectories=-/var/lib/keybear
+ReadOnlyDirectories=/usr/local/bin
+
+# Security options
+DynamicUser=yes
+PrivateTmp=yes
+PrivateUsers=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectHostName=yes
+ProtectClock=yes
+NoNewPrivileges=yes
+RestrictNamespaces=uts ipc pid user cgroup
 
 [Install]
 WantedBy=multi-user.target

@@ -2,10 +2,27 @@
 name = "keybear"
 version = "0.1.0"
 authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
+license = "AGPL-3.0-or-later"
 edition = "2018"
+readme = "README.md"
+repository = "https://github.com/keybear/keybear"
+description = "Self-hosted password manager"
+
+[badges]
+maintenance = { status = "experimental" }
 
 [dependencies]
 anyhow = "1.0.34"
 clap = "3.0.0-beta.2"
 log = "0.4.11"
 syslog = "5.0.0"
+
+# Crash on panics instead of trying to mitigate the problems
+[profile.release]
+panic = "abort"
+
+[package.metadata.deb]
+license-file = ["LICENSE", "0"]
+depends = "$auto, tor"
+maintainer-scripts = "debian/"
+systemd-units = { enable = true }

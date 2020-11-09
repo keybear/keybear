@@ -18,7 +18,35 @@
 - Untrackable/obfuscated server IP, perfect for running it at home
 - Low resource usage, can be easily run on a Raspberry Pi
 
-## Installing
+## Setup from source (easy)
+
+For hosting a keybear instance we assume you are using a Debian derived OS (Debian, Ubuntu, Mint, etc.).
+
+Install the `cargo deb` prequisite for building a `.deb` package:
+
+```bash
+cargo install cargo-deb
+```
+
+Build the installation package:
+
+```bash
+cargo deb
+```
+
+Install the package:
+
+```bash
+sudo dpkg -i target/debian/keybear*.deb
+```
+
+Ensure that the systemd service is running:
+
+```bash
+sudo systemctl status keybear.service
+```
+
+## Building from source (advanced)
 
 ### Cargo
 
@@ -34,9 +62,7 @@ Create a symbolic link in `/usr/local/bin`:
 ln -s $HOME/.cargo/bin/keybear /usr/local/bin/keybear 
 ```
 
-## Setup
-
-For hosting a keybear instance we assume you are using a Debian derived OS (Debian, Ubuntu, Mint, etc.).
+## Setup (advanced)
 
 ### Tor
 
@@ -65,10 +91,10 @@ sudo systemctl restart tor.service
 
 ### Systemd
 
-Copy the service file to `/usr/local/systemd/system`:
+Copy the service file to `/usr/lib/systemd/system`:
 
 ```bash
-sudo cp keybear.service /usr/local/systemd/system/
+sudo cp keybear.service /usr/lib/systemd/system/
 ```
 
 Tell systemd to look for the new service file, to start it everytime we boot and to start it now:

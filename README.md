@@ -8,6 +8,7 @@
    <a href="https://actions-badge.atrox.dev/keybear/keybear/goto"><img src="https://github.com/keybear/keybear/workflows/CI/badge.svg" alt="Build Status"/></a>
    <a href="https://github.com/keybear/keybear/releases"><img src="https://img.shields.io/crates/d/keybear.svg" alt="Downloads"/></a>
    <a href="https://crates.io/crates/keybear"><img src="https://img.shields.io/crates/v/keybear.svg" alt="Version"/></a>
+   <a href="https://codecov.io/gh/keybear/keybear"><img src="https://codecov.io/gh/keybear/keybear/branch/main/graph/badge.svg?token=32C44QK5R9" alt="Coverage"/></a>
 </div>
 
 ## Features
@@ -35,6 +36,10 @@ cargo deb
 ```
 
 Let Tor load our configuration for the onion service, add the following line to `/etc/tor/torrc`:
+
+```conf
+%include /etc/tor/torrc.d/keybear.conf
+```
 
 ```bash
 echo "%include /etc/tor/torrc.d/keybear.conf" | sudo tee -a /etc/tor/torrc

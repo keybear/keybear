@@ -1,3 +1,4 @@
+mod command;
 mod store;
 
 use anyhow::Result;
@@ -7,7 +8,7 @@ use std::{
     io::{Read, Write},
     net::{Ipv4Addr, SocketAddrV4, TcpListener},
 };
-use syslog::{Facility, Formatter3164};
+use syslog::Facility;
 
 const DEFAULT_PORT: u16 = 52477;
 

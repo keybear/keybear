@@ -27,13 +27,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install rust
+      - name: install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
-          profile: default
-          toolchain: stable
+          profile: minimal
+          toolchain: nightly
           override: true
-
+          components: rustfmt, clippy
+          
       - name: cargo check
         uses: actions-rs/cargo@v1
         with:

@@ -9,6 +9,7 @@
    <a href="https://github.com/keybear/keybear/releases"><img src="https://img.shields.io/crates/d/keybear.svg" alt="Downloads"/></a>
    <a href="https://crates.io/crates/keybear"><img src="https://img.shields.io/crates/v/keybear.svg" alt="Version"/></a>
    <a href="https://codecov.io/gh/keybear/keybear"><img src="https://codecov.io/gh/keybear/keybear/branch/main/graph/badge.svg?token=32C44QK5R9" alt="Coverage"/></a>
+   <a href="https://github.com/rust-secure-code/safety-dance/"><img src="https://img.shields.io/badge/unsafe-forbidden-brightgreen.svg" alt="Unsafe"/></a>
 </div>
 
 ## Features

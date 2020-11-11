@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod command;
+mod net;
 mod store;
 
 use anyhow::Result;
@@ -48,7 +49,7 @@ fn main() -> Result<()> {
     loop {
         // Block until we get a connection
         let (mut stream, addr) = listener.accept()?;
-        if addr.ip() != Ipv4Addr::LOCALHOST {
+        if !net::is_valid_client_ip(addr.ip()) {
             error!("External non-Tor connection initiated from address {:?}, this means your server might be compromised!", addr);
 
             // We only accept connections from the Tor hidden service on the same machine

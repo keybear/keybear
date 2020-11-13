@@ -9,17 +9,18 @@ jobs:
   # Build sources for every OS
   github_build:
     name: build release binaries
-
     strategy:
       fail-fast: false
       matrix:
         target:
           - x86_64-unknown-linux-gnu
+          - i586-unknown-linux-musl
         include:
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            name: keybear-x86_64-unknown-linux-gnu
-    runs-on: ${{ matrix.os }}
+            name: keybear-x86_64
+          - target: i586-unknown-linux-musl
+            name: keybear-i586
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
 
@@ -61,7 +62,7 @@ jobs:
       - name: download releases from github_build
         uses: actions/download-artifact@v2.0.5
         with:
-          name: keybear-x86_64-unknown-linux-gnu
+          name: ${{ matrix.name }}
           path: .
 
       - name: generate checksums

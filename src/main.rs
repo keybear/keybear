@@ -1,19 +1,19 @@
 #![forbid(unsafe_code)]
 
 mod command;
+mod config;
 mod net;
 mod store;
 
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
+use config::Config;
 use log::{debug, error, trace, LevelFilter};
 use std::{
     io::{Read, Write},
     net::{Ipv4Addr, SocketAddrV4, TcpListener},
 };
 use syslog::Facility;
-
-const DEFAULT_PORT: u16 = 52477;
 
 fn main() -> Result<()> {
     // Function to check if a file arg exists
@@ -31,18 +31,23 @@ fn main() -> Result<()> {
         (author: crate_authors!())
         (about: crate_description!())
         (@arg CONFIG: -c --config +takes_value {file_exists} "Sets a custom config file")
-        (@arg PORT: -p --port +takes_value "Override the default port")
     )
     .get_matches();
 
-    let port = matches.value_of_t::<u16>("PORT").unwrap_or(DEFAULT_PORT);
+    // Load the config TOML file
+    let config = match matches.value_of("config") {
+        // If a file is passed as an argument use that
+        Some(config_path) => Config::from_file(config_path),
+        // Otherwise try to get the default file location
+        None => Config::from_default_file_or_empty(),
+    }?;
 
     // Setup logging to syslog
     syslog::init(Facility::LOG_USER, LevelFilter::Debug, None)
         .expect("Setting up system log failed");
 
     // Start the Tor server
-    let socket = SocketAddrV4::new(Ipv4Addr::LOCALHOST, port);
+    let socket = SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port());
     let listener = TcpListener::bind(socket)?;
     debug!("Listening on {:?}", socket);
 

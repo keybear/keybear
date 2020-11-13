@@ -7,6 +7,7 @@ edition = "2018"
 readme = "README.md"
 repository = "https://github.com/keybear/keybear"
 description = "Self-hosted password manager"
+include = ["src/**/*", "LICENSE", "README.md"]
 
 [badges]
 maintenance = { status = "experimental" }

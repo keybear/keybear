@@ -2,6 +2,7 @@
 
 mod command;
 mod config;
+mod crypto;
 mod net;
 mod store;
 

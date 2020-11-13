@@ -1,5 +1,3 @@
-pub mod crypto;
-
 use std::net::{IpAddr, Ipv4Addr};
 
 /// Check if the client trying to connect is valid.

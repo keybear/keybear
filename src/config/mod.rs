@@ -3,18 +3,19 @@ use log::debug;
 use serde::Deserialize;
 use std::{fmt::Debug, fs, path::Path};
 
-// Default location of the configuration file
+/// Where the configuration file is trying to be found if not specified.
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "/var/lib/keybear/config.toml";
 
-// Default values for the configuration file
-pub const DEFAULT_PRIVATE_KEY_PATH: &str = "/var/lib/keybear/private_key";
-pub const DEFAULT_PORT: u16 = 52477;
+/// Where the file containing the crypto keys reside.
+pub const DEFAULT_KEY_PATH: &str = "/var/lib/keybear/key";
+/// The port that the server will listen on for the Tor service.
+pub const DEFAULT_SERVER_PORT: u16 = 52477;
 
 /// The application configuration.
 #[derive(Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct Config {
-    /// Location of the file containing the private key.
-    private_key_path: Option<String>,
+    /// Location of the file containing the secret key.
+    key_path: Option<String>,
     /// Information about things like the ports to run on.
     server: Option<ServerConfig>,
 }
@@ -56,14 +57,14 @@ impl Config {
             .map_err(|err| anyhow!("Reading keybear configuration failed: {}", err))
     }
 
-    /// Path of the private key.
-    pub fn private_key_path(&self) -> &Path {
-        self.private_key_path
+    /// Path of the secret key.
+    pub fn key_path(&self) -> &Path {
+        self.key_path
             .as_ref()
             // Convert the string to a path
             .map(|path_str| Path::new(path_str))
             // If no string is set use the default value
-            .unwrap_or(Path::new(DEFAULT_PRIVATE_KEY_PATH))
+            .unwrap_or(Path::new(DEFAULT_KEY_PATH))
     }
 
     /// Port to use that the Tor hidden service tries to connect to.
@@ -73,7 +74,7 @@ impl Config {
             // Get the value from the server if it's set
             .map(|server| server.port())
             // Otherwise use the default
-            .unwrap_or(DEFAULT_PORT)
+            .unwrap_or(DEFAULT_SERVER_PORT)
     }
 }
 
@@ -87,7 +88,7 @@ pub struct ServerConfig {
 impl ServerConfig {
     /// Port to use that the Tor hidden service tries to connect to.
     pub fn port(&self) -> u16 {
-        self.port.unwrap_or(DEFAULT_PORT)
+        self.port.unwrap_or(DEFAULT_SERVER_PORT)
     }
 }
 
@@ -104,11 +105,8 @@ mod tests {
         assert_eq!(config, Config::default());
 
         // Verify the default values
-        assert_eq!(
-            config.private_key_path(),
-            Path::new(config::DEFAULT_PRIVATE_KEY_PATH)
-        );
-        assert_eq!(config.server_port(), config::DEFAULT_PORT);
+        assert_eq!(config.key_path(), Path::new(config::DEFAULT_KEY_PATH));
+        assert_eq!(config.server_port(), config::DEFAULT_SERVER_PORT);
 
         Ok(())
     }

@@ -20,6 +20,8 @@
 - Untrackable/obfuscated server IP, perfect for running it at home
 - Low resource usage, can be easily run on a Raspberry Pi
 
+## [Installation/usage instructions](https://keybear.github.io/keybear/)
+
 ## Credits
 
 Logo and name credits go to [@rottier](https://github.com/rottier).

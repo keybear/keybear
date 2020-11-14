@@ -38,12 +38,11 @@ pub struct Storage {
 mod tests {
     use crate::store::StorageBuilder;
     use anyhow::Result;
-    use tempdir::TempDir;
 
     #[test]
     fn new_database() -> Result<()> {
         // Create a temporary directory for the test database
-        let dir = TempDir::new("keybear_test")?;
+        let dir = tempfile::tempdir()?;
 
         // Construct the storage with a new database.
         let _storage = StorageBuilder::new(dir.path().join("test_db.sqlite")).build()?;

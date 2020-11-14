@@ -24,12 +24,12 @@ serde = { version = "1.0.117", features = ["derive"] }
 syslog = "5.0.0"
 toml = "0.5.7"
 
+[dev-dependencies]
+tempfile = "3.1.0"
+
 # Crash on panics instead of trying to mitigate the problems
 [profile.release]
 panic = "abort"
-
-[dev-dependencies]
-tempdir = "0.3.7"
 
 [package.metadata.deb]
 license-file = ["LICENSE", "0"]

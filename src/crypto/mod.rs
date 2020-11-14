@@ -94,7 +94,6 @@ mod tests {
     use crate::crypto::KeypairExt;
     use anyhow::Result;
     use ed25519_dalek::Keypair;
-    use tempdir::TempDir;
 
     #[test]
     fn verify() -> Result<()> {
@@ -107,8 +106,8 @@ mod tests {
     #[test]
     fn save_and_load() -> Result<()> {
         // Create a temporary directory for the test database
-        let dir = TempDir::new("keybear_test")?;
-        // Define the temporary file to save the key in
+        let dir = tempfile::tempdir()?;
+        // Create the temporary file to save the key in
         let file = dir.path().join("key");
 
         // Generate a new pair of keys.

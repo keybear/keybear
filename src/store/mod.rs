@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rusqlite::Connection;
+use sled::Db;
 use std::path::PathBuf;
 
 /// Structure to setup the [`Storage`](./struct.Storage.html) struct for encoding & decoding messages.
@@ -22,7 +22,7 @@ impl StorageBuilder {
     /// Construct the storage struct.
     pub fn build(self) -> Result<Storage> {
         Ok(Storage {
-            db: Connection::open(self.database_path)?,
+            db: sled::open(self.database_path)?,
         })
     }
 }
@@ -30,8 +30,8 @@ impl StorageBuilder {
 /// Structure to decode & encode messages.
 #[derive(Debug)]
 pub struct Storage {
-    /// The SQLite database containing the keys.
-    db: Connection,
+    /// The database containing the keys.
+    db: Db,
 }
 
 #[cfg(test)]
@@ -45,7 +45,7 @@ mod tests {
         let dir = tempfile::tempdir()?;
 
         // Construct the storage with a new database.
-        let _storage = StorageBuilder::new(dir.path().join("test_db.sqlite")).build()?;
+        let _storage = StorageBuilder::new(dir.path().join("test.db")).build()?;
 
         // Close the directory
         dir.close()?;

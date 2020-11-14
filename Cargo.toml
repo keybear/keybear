@@ -18,9 +18,9 @@ clap = "3.0.0-beta.2"
 ed25519-dalek = "1.0.1"
 log = "0.4.11"
 rand = "0.7.3"
-rusqlite = "0.24.1"
 semver = "0.11.0"
 serde = { version = "1.0.117", features = ["derive"] }
+sled = "0.34.6"
 syslog = "5.0.0"
 toml = "0.5.7"
 

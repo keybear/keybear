@@ -12,48 +12,52 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - x86_64-unknown-linux-gnu
-          - i586-unknown-linux-musl
-        include:
-          - target: x86_64-unknown-linux-gnu
-            name: keybear-x86_64
-          - target: i586-unknown-linux-musl
-            name: keybear-i586
+        job:
+          - { target: aarch64-unknown-linux-gnu , name: keybear-aarch64 }
+          - { target: i686-unknown-linux-gnu , name: keybear-i686 }
+          - { target: x86_64-unknown-linux-gnu , name: keybear-x86_64 }
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
 
+      - name: install linker prerequisites (arm)
+        if: matrix.job.target == 'arm-unknown-linux-gnueabihf'
+        run: apt -y install gcc-arm-linux-gnueabihf
+
+      - name: install linker prerequisites (aarch64)
+        if: matrix.job.target == 'aarch64-unknown-linux-gnu'
+        run: apt -y install gcc-aarch64-linux-gnu
+
       - name: install rust
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@v1.0.6
         with:
           profile: minimal
           toolchain: stable
           override: true
-          target: ${{ matrix.target }}
+          target: ${{ matrix.job.target }}
 
       - name: build target
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --target ${{ matrix.target }}
+          args: --release --target ${{ matrix.job.target }}
 
       - name: prepare build artifacts
         run: |
-          cd target/${{ matrix.target }}/release
+          cd target/${{ matrix.job.target }}/release
           strip keybear
-          mv keybear ../../../${{ matrix.name }}
+          mv keybear ../../../${{ matrix.job.name }}
           cd -
 
       - name: upload build artifact
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: ${{ matrix.name }}
-          path: ${{ matrix.name }}
+          name: ${{ matrix.job.name }}
+          path: ${{ matrix.job.name }}
 
   # Create GitHub release with Rust build targets and release notes
   github_release:
-    name: Create GitHub Release
+    name: create github release
     needs: github_build
     runs-on: ubuntu-latest
     steps:
@@ -62,13 +66,13 @@ jobs:
       - name: download releases from github_build
         uses: actions/download-artifact@v2.0.5
         with:
-          name: ${{ matrix.name }}
+          name: ${{ matrix.job.name }}
           path: .
 
       - name: generate checksums
         run: for file in keybear-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
-      - name: create release ${{ matrix.target }}
+      - name: create release ${{ matrix.job.target }}
         uses: softprops/action-gh-release@v1
         with:
           files: |

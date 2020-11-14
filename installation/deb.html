@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - Keybear</title>
+        <title>Build Debian Package - Keybear</title>
         
         
 
@@ -18,28 +18,28 @@
         <meta name="theme-color" content="#ffffff" />
 
         
-        <link rel="icon" href="favicon.svg">
+        <link rel="icon" href="../favicon.svg">
         
         
-        <link rel="shortcut icon" href="favicon.png">
+        <link rel="shortcut icon" href="../favicon.png">
         
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
         
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="stylesheet" href="../css/print.css" media="print">
         
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         
-        <link rel="stylesheet" href="fonts/fonts.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
         
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -49,7 +49,7 @@
     <body>
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="installation/installation.html"><strong aria-hidden="true">1.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="installation/deb.html"><strong aria-hidden="true">1.1.</strong> Build Debian Package</a></li><li class="chapter-item expanded "><a href="installation/manually.html"><strong aria-hidden="true">1.2.</strong> With Cargo Install</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="../installation/installation.html"><strong aria-hidden="true">1.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../installation/deb.html" class="active"><strong aria-hidden="true">1.1.</strong> Build Debian Package</a></li><li class="chapter-item expanded "><a href="../installation/manually.html"><strong aria-hidden="true">1.2.</strong> With Cargo Install</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -131,7 +131,7 @@
 
                     <div class="right-buttons">
                         
-                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
                         
@@ -167,16 +167,57 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#introduction" id="introduction">Introduction</a></h1>
+                        <h1><a class="header" href="#building-a-debian-package" id="building-a-debian-package">Building a debian package</a></h1>
+<h2><a class="header" href="#prerequisites" id="prerequisites">Prerequisites</a></h2>
+<p>A Rust installation is required for this step.  Installation instructions can be found here: <a href="https://rustup.rs/">rustup.rs</a></p>
+<p>Install the <code>cargo deb</code> prequisite for building a <code>.deb</code> package:</p>
+<pre><code class="language-bash">cargo install cargo-deb
+</code></pre>
+<p>We also need to clone our repository somewhere:</p>
+<pre><code class="language-bash">git clone https://github.com/keybear/keybear &amp;&amp; cd keybear
+</code></pre>
+<h2><a class="header" href="#build" id="build">Build</a></h2>
+<p>Build the installation package:</p>
+<pre><code class="language-bash">cargo deb
+</code></pre>
+<p>This will produce a <code>.deb</code> package in the <code>target/debian</code> folder.</p>
+<h2><a class="header" href="#install-the-package" id="install-the-package">Install the package</a></h2>
+<p>Install the package:</p>
+<pre><code class="language-bash">sudo dpkg -i target/debian/keybear*.deb
+</code></pre>
+<p>Installing the package should start the systemd service, ensure it’s running without any errors:</p>
+<pre><code class="language-bash">sudo systemctl status keybear.service
+</code></pre>
+<h2><a class="header" href="#configure-tor" id="configure-tor">Configure Tor</a></h2>
+<p>Let Tor load our configuration for the onion service, add the following line to <code>/etc/tor/torrc</code>:</p>
+<pre><code class="language-conf">%include /etc/tor/torrc.d/keybear.conf
+</code></pre>
+<pre><code class="language-bash">echo &quot;%include /etc/tor/torrc.d/keybear.conf&quot; | sudo tee -a /etc/tor/torrc
+</code></pre>
+<p>Restart the Tor service to enable the hidden service:</p>
+<pre><code class="language-bash">sudo systemctl restart tor.service
+</code></pre>
+<h2><a class="header" href="#from-source-advanced" id="from-source-advanced">From source (advanced)</a></h2>
+<h3><a class="header" href="#cargo" id="cargo">Cargo</a></h3>
+<p>Install the keybear binary:</p>
+<pre><code class="language-bash">cargo install keybear
+</code></pre>
+<p>Create a symbolic link in <code>/usr/local/bin</code>:</p>
+<pre><code class="language-bash">ln -s $HOME/.cargo/bin/keybear /usr/local/bin/keybear 
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
+                            <a rel="prev" href="../installation/installation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
 
                         
-                            <a rel="next" href="installation/installation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../installation/manually.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -188,9 +229,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
+                    <a rel="prev" href="../installation/installation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
 
                 
-                    <a rel="next" href="installation/installation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../installation/manually.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -213,14 +258,14 @@
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         

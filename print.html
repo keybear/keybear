@@ -3,7 +3,9 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - Keybear</title>
+        <title>Keybear</title>
+        
+        <meta name="robots" content="noindex" />
         
         
 
@@ -168,6 +170,78 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#introduction" id="introduction">Introduction</a></h1>
+<h1><a class="header" href="#installation" id="installation">Installation</a></h1>
+<p>For hosting a keybear instance we assume you are using a Debian derived OS (Debian, Ubuntu, Mint, etc.).</p>
+<h1><a class="header" href="#building-a-debian-package" id="building-a-debian-package">Building a debian package</a></h1>
+<h2><a class="header" href="#prerequisites" id="prerequisites">Prerequisites</a></h2>
+<p>A Rust installation is required for this step.  Installation instructions can be found here: <a href="https://rustup.rs/">rustup.rs</a></p>
+<p>Install the <code>cargo deb</code> prequisite for building a <code>.deb</code> package:</p>
+<pre><code class="language-bash">cargo install cargo-deb
+</code></pre>
+<p>We also need to clone our repository somewhere:</p>
+<pre><code class="language-bash">git clone https://github.com/keybear/keybear &amp;&amp; cd keybear
+</code></pre>
+<h2><a class="header" href="#build" id="build">Build</a></h2>
+<p>Build the installation package:</p>
+<pre><code class="language-bash">cargo deb
+</code></pre>
+<p>This will produce a <code>.deb</code> package in the <code>target/debian</code> folder.</p>
+<h2><a class="header" href="#install-the-package" id="install-the-package">Install the package</a></h2>
+<p>Install the package:</p>
+<pre><code class="language-bash">sudo dpkg -i target/debian/keybear*.deb
+</code></pre>
+<p>Installing the package should start the systemd service, ensure it’s running without any errors:</p>
+<pre><code class="language-bash">sudo systemctl status keybear.service
+</code></pre>
+<h2><a class="header" href="#configure-tor" id="configure-tor">Configure Tor</a></h2>
+<p>Let Tor load our configuration for the onion service, add the following line to <code>/etc/tor/torrc</code>:</p>
+<pre><code class="language-conf">%include /etc/tor/torrc.d/keybear.conf
+</code></pre>
+<pre><code class="language-bash">echo &quot;%include /etc/tor/torrc.d/keybear.conf&quot; | sudo tee -a /etc/tor/torrc
+</code></pre>
+<p>Restart the Tor service to enable the hidden service:</p>
+<pre><code class="language-bash">sudo systemctl restart tor.service
+</code></pre>
+<h2><a class="header" href="#from-source-advanced" id="from-source-advanced">From source (advanced)</a></h2>
+<h3><a class="header" href="#cargo" id="cargo">Cargo</a></h3>
+<p>Install the keybear binary:</p>
+<pre><code class="language-bash">cargo install keybear
+</code></pre>
+<p>Create a symbolic link in <code>/usr/local/bin</code>:</p>
+<pre><code class="language-bash">ln -s $HOME/.cargo/bin/keybear /usr/local/bin/keybear 
+</code></pre>
+<h1><a class="header" href="#installing-it-manually-using-cargo" id="installing-it-manually-using-cargo">Installing it manually using Cargo</a></h1>
+<h2><a class="header" href="#prerequisites-1" id="prerequisites-1">Prerequisites</a></h2>
+<p>A Rust installation is required for this step.  Installation instructions can be found here: <a href="https://rustup.rs/">rustup.rs</a></p>
+<h2><a class="header" href="#cargo-1" id="cargo-1">Cargo</a></h2>
+<p>Install the package using Cargo:</p>
+<pre><code class="language-bash">cargo install keybear
+</code></pre>
+<h2><a class="header" href="#tor" id="tor">Tor</a></h2>
+<p>Install Tor:</p>
+<pre><code class="language-bash">sudo apt install tor
+</code></pre>
+<p>Configure a hidden Tor onion service, add the following lines to <code>/etc/tor/torrc</code>:</p>
+<pre><code class="language-conf">HiddenServiceDir /var/lib/tor/keybear
+HiddenServicePort 5219 127.0.0.1:52477
+</code></pre>
+<pre><code class="language-bash">printf &quot;HiddenServiceDir /var/lib/tor/keybear\nHiddenServicePort 5219 127.0.0.1:52477&quot; | sudo tee -a /etc/tor/torrc
+</code></pre>
+<p>Restart Tor:</p>
+<pre><code class="language-bash">sudo systemctl restart tor.service
+</code></pre>
+<h2><a class="header" href="#systemd" id="systemd">Systemd</a></h2>
+<p>Copy the service file to <code>/usr/lib/systemd/system</code>:</p>
+<pre><code class="language-bash">sudo cp keybear.service /usr/lib/systemd/system/
+</code></pre>
+<p>Tell systemd to look for the new service file, to start it everytime we boot and to start it now:</p>
+<pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl enable keybear.service
+sudo systemctl start keybear.service
+</code></pre>
+<p>Verify that the service is running:</p>
+<pre><code class="language-bash">sudo systemctl status keybear.service
+</code></pre>
 
                     </main>
 
@@ -175,10 +249,6 @@
                         <!-- Mobile navigation buttons -->
                         
 
-                        
-                            <a rel="next" href="installation/installation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
                         
 
                         <div style="clear: both"></div>
@@ -189,10 +259,6 @@
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
 
-                
-                    <a rel="next" href="installation/installation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
                 
             </nav>
 
@@ -225,6 +291,14 @@
         <!-- Custom JS scripts -->
         
 
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
         
 
     </body>

@@ -1,0 +1,28 @@
+name: Book
+
+on:
+  push:
+    paths:
+      - "docs/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: setup mdbook
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: "latest"
+
+      - name: build book
+        run: mdbook build docs/
+
+      - name: deploy to github pages
+        uses: s0/git-publish-subdir-action@master
+        env:
+          REPO: self
+          BRANCH: gh-pages
+          FOLDER: docs/book
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

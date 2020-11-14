@@ -1,0 +1,15 @@
+[book]
+authors = ["Thomas Versteeg"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Keybear"
+create-missing = false
+
+[preprocessor.index]
+
+[preprocessor.links]
+
+[output.html]
+curly-quotes = true
+git-repository-url = "https://github.com/keybear/keybear"

@@ -1,4 +1,17 @@
+use actix_web::{dev::RequestHead, guard::Guard};
 use std::net::{IpAddr, Ipv4Addr};
+
+/// Actix guard to ensure that the only requests we receive are Tor requests.
+pub struct TorGuard;
+
+impl Guard for TorGuard {
+    fn check(&self, req: &RequestHead) -> bool {
+        match req.peer_addr {
+            Some(addr) => is_valid_client_ip(addr.ip()),
+            None => false,
+        }
+    }
+}
 
 /// Check if the client trying to connect is valid.
 ///

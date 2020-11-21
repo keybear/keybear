@@ -6,17 +6,23 @@ mod crypto;
 mod net;
 mod store;
 
+use crate::net::TorGuard;
+use actix_web::{get, guard::Not, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
 use config::Config;
-use log::{debug, error, trace, LevelFilter};
-use std::{
-    io::{Read, Write},
-    net::{Ipv4Addr, SocketAddrV4, TcpListener},
-};
+use log::LevelFilter;
+use std::net::{Ipv4Addr, SocketAddrV4};
 use syslog::Facility;
 
-fn main() -> Result<()> {
+/// Get a list of all users.
+#[get("/users/")]
+async fn users() -> impl Responder {
+    HttpResponse::Ok().body("Hello world")
+}
+
+#[actix_web::main]
+async fn main() -> Result<()> {
     // Function to check if a file arg exists
     let file_exists = |path: &str| {
         if std::fs::metadata(path).is_ok() {
@@ -48,35 +54,17 @@ fn main() -> Result<()> {
         .expect("Setting up system log failed");
 
     // Start the Tor server
-    let socket = SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port());
-    let listener = TcpListener::bind(socket)?;
-    debug!("Listening on {:?}", socket);
-
-    loop {
-        // Block until we get a connection
-        let (mut stream, addr) = listener.accept()?;
-        if !net::is_valid_client_ip(addr.ip()) {
-            error!("External non-Tor connection initiated from address {:?}, this means your server might be compromised!", addr);
-
-            // We only accept connections from the Tor hidden service on the same machine
-            continue;
-        }
-
-        trace!("Connection from {:?} received", addr);
-
-        // Get the request
-        let mut buffer = [0; 1024];
-        stream.read(&mut buffer)?;
-
-        let (status_line, contents) = if buffer.starts_with(b"GET / HTTP/1.1\r\n") {
-            ("HTTP/1.1 200 OK\r\n\r\n", "Hi there")
-        } else {
-            ("HTTP/1.1 404 NOT FOUND\r\n\r\n", "Sorry not found")
-        };
-
-        let response = format!("{}{}", status_line, contents);
-
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
-    }
+    Ok(HttpServer::new(|| {
+        App::new()
+            .service(web::scope("/users").service(users).guard(TorGuard))
+            // Deny everything that's opened from outside the tor connection
+            .default_service(
+                web::route()
+                    .guard(Not(TorGuard))
+                    .to(|| HttpResponse::MethodNotAllowed()),
+            )
+    })
+    .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port()))?
+    .run()
+    .await?)
 }

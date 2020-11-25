@@ -11,3 +11,6 @@ Cargo.lock
 
 # Mdbook files
 book/
+
+# Database files
+*.db

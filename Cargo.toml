@@ -13,7 +13,9 @@ include = ["src/**/*", "LICENSE", "README.md"]
 maintenance = { status = "experimental" }
 
 [dependencies]
-actix-web = "3.2.0"
+actix-storage = { version = "0.1.1", features = ["serde-json"] }
+actix-storage-sled = "0.1.1"
+actix-web = "3.3.0"
 anyhow = "1.0.34"
 clap = "3.0.0-beta.2"
 ed25519-dalek = "1.0.1"

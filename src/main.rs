@@ -3,23 +3,18 @@
 mod command;
 mod config;
 mod crypto;
+mod device;
 mod net;
 mod store;
 
-use crate::net::TorGuard;
-use actix_web::{get, guard::Not, web, App, HttpResponse, HttpServer, Responder};
+use crate::{net::TorGuard, store::StorageBuilder};
+use actix_web::{guard::Not, middleware::Logger, web, App, HttpResponse, HttpServer};
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
 use config::Config;
 use log::LevelFilter;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use syslog::Facility;
-
-/// Get a list of all users.
-#[get("/users/")]
-async fn users() -> impl Responder {
-    HttpResponse::Ok().body("Hello world")
-}
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -53,16 +48,19 @@ async fn main() -> Result<()> {
     syslog::init(Facility::LOG_USER, LevelFilter::Debug, None)
         .expect("Setting up system log failed");
 
+    // TODO: wrap everything underneath here in a function of which the result get's logged
+
+    // Setup the database
+    let storage = StorageBuilder::new(config.database_path()).build()?;
+
     // Start the Tor server
-    Ok(HttpServer::new(|| {
+    Ok(HttpServer::new(move || {
         App::new()
-            .service(web::scope("/users").service(users).guard(TorGuard))
-            // Deny everything that's opened from outside the tor connection
-            .default_service(
-                web::route()
-                    .guard(Not(TorGuard))
-                    .to(|| HttpResponse::MethodNotAllowed()),
-            )
+            // Attach the database
+            .data(storage.clone())
+            // Use the default logging service
+            .wrap(Logger::default())
+            .service(web::scope("/").service(device::devices).guard(TorGuard))
     })
     .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port()))?
     .run()

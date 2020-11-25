@@ -1,5 +1,6 @@
+use actix_storage::{Format, Storage};
+use actix_storage_sled::{SledConfig, SledStore};
 use anyhow::Result;
-use sled::Db;
 use std::path::PathBuf;
 
 /// Structure to setup the [`Storage`](./struct.Storage.html) struct for encoding & decoding messages.
@@ -21,17 +22,13 @@ impl StorageBuilder {
 
     /// Construct the storage struct.
     pub fn build(self) -> Result<Storage> {
-        Ok(Storage {
-            db: sled::open(self.database_path)?,
-        })
+        Ok(Storage::build()
+            .store(SledStore::from_db(
+                SledConfig::default().path(self.database_path).open()?,
+            ))
+            .format(Format::Json)
+            .finish())
     }
-}
-
-/// Structure to decode & encode messages.
-#[derive(Debug)]
-pub struct Storage {
-    /// The database containing the keys.
-    db: Db,
 }
 
 #[cfg(test)]

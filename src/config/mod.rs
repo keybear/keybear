@@ -6,8 +6,10 @@ use std::{fmt::Debug, fs, path::Path};
 /// Where the configuration file is trying to be found if not specified.
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "/var/lib/keybear/config.toml";
 
-/// Where the file containing the crypto keys reside.
+/// Where the file containing the crypto keys resides.
 pub const DEFAULT_KEY_PATH: &str = "/var/lib/keybear/key";
+/// Where the database resides.
+pub const DEFAULT_DATABASE_PATH: &str = "/var/lib/keybear/db";
 /// The port that the server will listen on for the Tor service.
 pub const DEFAULT_SERVER_PORT: u16 = 52477;
 
@@ -16,6 +18,8 @@ pub const DEFAULT_SERVER_PORT: u16 = 52477;
 pub struct Config {
     /// Location of the file containing the secret key.
     key_path: Option<String>,
+    /// Location of the database.
+    database_path: Option<String>,
     /// Information about things like the ports to run on.
     server: Option<ServerConfig>,
 }
@@ -67,6 +71,16 @@ impl Config {
             .unwrap_or(Path::new(DEFAULT_KEY_PATH))
     }
 
+    /// Path of the database.
+    pub fn database_path(&self) -> &Path {
+        self.database_path
+            .as_ref()
+            // Convert the string to a path
+            .map(|path_str| Path::new(path_str))
+            // If no string is set use the default value
+            .unwrap_or(Path::new(DEFAULT_DATABASE_PATH))
+    }
+
     /// Port to use that the Tor hidden service tries to connect to.
     pub fn server_port(&self) -> u16 {
         self.server
@@ -106,6 +120,10 @@ mod tests {
 
         // Verify the default values
         assert_eq!(config.key_path(), Path::new(config::DEFAULT_KEY_PATH));
+        assert_eq!(
+            config.database_path(),
+            Path::new(config::DEFAULT_DATABASE_PATH)
+        );
         assert_eq!(config.server_port(), config::DEFAULT_SERVER_PORT);
 
         Ok(())

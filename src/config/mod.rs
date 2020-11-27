@@ -68,7 +68,7 @@ impl Config {
             // Convert the string to a path
             .map(|path_str| Path::new(path_str))
             // If no string is set use the default value
-            .unwrap_or(Path::new(DEFAULT_KEY_PATH))
+            .unwrap_or_else(|| Path::new(DEFAULT_KEY_PATH))
     }
 
     /// Path of the database.
@@ -78,7 +78,7 @@ impl Config {
             // Convert the string to a path
             .map(|path_str| Path::new(path_str))
             // If no string is set use the default value
-            .unwrap_or(Path::new(DEFAULT_DATABASE_PATH))
+            .unwrap_or_else(|| Path::new(DEFAULT_DATABASE_PATH))
     }
 
     /// Port to use that the Tor hidden service tries to connect to.

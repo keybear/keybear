@@ -34,7 +34,7 @@ pub async fn get_devices(_path: Path<()>, storage: Data<Storage>) -> Result<Http
     let devices = storage
         .get::<_, Devices>("devices")
         .await?
-        .unwrap_or_else(|| Devices::default());
+        .unwrap_or_else(Devices::default);
 
     Ok(HttpResponse::Ok().json(devices))
 }
@@ -49,7 +49,7 @@ pub async fn post_devices(
     let mut devices = storage
         .get::<_, Devices>("devices")
         .await?
-        .unwrap_or_else(|| Devices::default());
+        .unwrap_or_else(Devices::default);
 
     // Register the passed device
     devices.register(device.into_inner());

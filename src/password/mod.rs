@@ -40,7 +40,7 @@ pub async fn get_passwords(_path: Path<()>, storage: Data<Storage>) -> Result<Ht
     let passwords = storage
         .get::<_, Passwords>("passwords")
         .await?
-        .unwrap_or_else(|| Passwords::default());
+        .unwrap_or_else(Passwords::default);
 
     Ok(HttpResponse::Ok().json(passwords))
 }
@@ -55,7 +55,7 @@ pub async fn post_passwords(
     let mut passwords = storage
         .get::<_, Passwords>("passwords")
         .await?
-        .unwrap_or_else(|| Passwords::default());
+        .unwrap_or_else(Passwords::default);
 
     // Register the passed password
     passwords.register(password.into_inner());

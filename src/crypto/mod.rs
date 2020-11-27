@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use ed25519_dalek::{Keypair, KEYPAIR_LENGTH};
+use log::{debug, info};
 use rand::rngs::OsRng;
 use std::{
     fs::{self, File},
@@ -26,6 +27,23 @@ pub trait KeypairExt {
     fn save<P>(&self, file: P) -> Result<()>
     where
         P: AsRef<Path>;
+
+    /// Try to load the crypto key or generate a new one.
+    fn from_file_or_generate<P>(file: P) -> Result<Keypair>
+    where
+        P: AsRef<Path>,
+    {
+        if Self::verify_file(&file) {
+            // The file exists, open it
+            Self::from_file(file)
+        } else {
+            // The file doesn't exist, generate a new one and save it
+            let key = Self::generate_with_os_rand();
+            key.save(file)?;
+
+            Ok(key)
+        }
+    }
 }
 
 impl KeypairExt for Keypair {
@@ -33,11 +51,19 @@ impl KeypairExt for Keypair {
     where
         P: AsRef<Path>,
     {
+        // Get the generic as the actual reference so it's traits can be used
+        let file = file.as_ref();
+
+        debug!("Verifying file \"{}\"", file.display());
+
         // TODO: add more checks
-        file.as_ref().is_file()
+        file.is_file()
     }
 
     fn generate_with_os_rand() -> Keypair {
+        // Get the generic as the actual reference so it's traits can be used
+        info!("Generating new keypair");
+
         // Define a operating-system based random source
         let mut csprng = OsRng {};
 
@@ -51,6 +77,8 @@ impl KeypairExt for Keypair {
     {
         // Get the generic as the actual reference so it's traits can be used
         let file = file.as_ref();
+
+        info!("Loading keypair from file \"{}\"", file.display());
 
         // Cannot load from disk if the file is not a valid one
         if !Self::verify_file(file) {
@@ -83,6 +111,8 @@ impl KeypairExt for Keypair {
         // Get the generic as the actual reference so it's traits can be used
         let file = file.as_ref();
 
+        info!("Saving keypair to file \"{}\"", file.display());
+
         // Try to write the keys as raw bytes to the disk
         fs::write(file, self.to_bytes())
             .map_err(|err| anyhow!("Could not write crypto keys to file {:?}: {}", file, err))
@@ -96,11 +126,9 @@ mod tests {
     use ed25519_dalek::Keypair;
 
     #[test]
-    fn verify() -> Result<()> {
+    fn verify() {
         // A non-existing file means it's not a valid file for the keys
         assert_eq!(Keypair::verify_file("/definitily/should/not/exist"), false);
-
-        Ok(())
     }
 
     #[test]

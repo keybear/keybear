@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 
-mod command;
 mod config;
 mod crypto;
 mod device;
@@ -8,11 +7,12 @@ mod net;
 mod password;
 mod store;
 
-use crate::{net::TorGuard, store::StorageBuilder};
+use crate::{crypto::KeypairExt, net::TorGuard, store::StorageBuilder};
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
 use config::Config;
+use ed25519_dalek::Keypair;
 use log::LevelFilter;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use syslog::Facility;
@@ -50,6 +50,9 @@ async fn main() -> Result<()> {
         .expect("Setting up system log failed");
 
     // TODO: wrap everything underneath here in a function of which the result get's logged
+
+    // Generate a keypair if it doesn't exist
+    let _key = Keypair::from_file_or_generate(config.key_path())?;
 
     // Setup the database
     let storage = StorageBuilder::new(config.database_path()).build()?;

@@ -5,10 +5,11 @@ mod config;
 mod crypto;
 mod device;
 mod net;
+mod password;
 mod store;
 
 use crate::{net::TorGuard, store::StorageBuilder};
-use actix_web::{guard::Not, middleware::Logger, web, App, HttpResponse, HttpServer};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
 use config::Config;
@@ -60,7 +61,14 @@ async fn main() -> Result<()> {
             .data(storage.clone())
             // Use the default logging service
             .wrap(Logger::default())
-            .service(web::scope("/").service(device::devices).guard(TorGuard))
+            .service(
+                web::scope("/")
+                    .service(device::post_devices)
+                    .service(device::get_devices)
+                    .service(password::post_passwords)
+                    .service(password::get_passwords)
+                    .guard(TorGuard),
+            )
     })
     .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port()))?
     .run()

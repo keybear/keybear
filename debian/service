@@ -6,15 +6,13 @@ After=tor.service network.service
 [Service]
 Type=simple
 Restart=always
-ExecStart=/usr/local/bin/keybear
+ExecStart=/usr/bin/keybear
 WorkingDirectory=-/var/lib/keybear
 ReadWriteDirectories=-/var/lib/keybear
-ReadOnlyDirectories=/usr/local/bin
+ReadOnlyDirectories=/usr/bin
 
 # Security options
-DynamicUser=yes
 PrivateTmp=yes
-PrivateUsers=yes
 PrivateDevices=yes
 ProtectSystem=strict
 ProtectKernelTunables=yes

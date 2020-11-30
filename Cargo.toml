@@ -15,15 +15,14 @@ maintenance = { status = "experimental" }
 [dependencies]
 actix-storage = { version = "0.1.1", features = ["serde-json"] }
 actix-storage-sled = "0.1.1"
-actix-web = "3.3.0"
+actix-web = "3.3.1"
 anyhow = "1.0.34"
 clap = "3.0.0-beta.2"
 ed25519-dalek = "1.0.1"
 log = "0.4.11"
+paperclip = { version = "0.5.0", features = ["actix"] }
 rand = "0.7.3"
-semver = "0.11.0"
 serde = { version = "1.0.117", features = ["derive"] }
-sled = "0.34.6"
 syslog = "5.0.0"
 toml = "0.5.7"
 

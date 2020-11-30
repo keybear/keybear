@@ -1,13 +1,14 @@
 use actix_storage::Storage;
-use actix_web::{
-    get, post,
+use actix_web::{Error, HttpResponse};
+use paperclip::actix::{
+    api_v2_operation,
     web::{Data, Json, Path},
-    Error, HttpResponse,
+    Apiv2Schema, OpenApiExt,
 };
 use serde::{Deserialize, Serialize};
 
 /// A list of endpoints.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Apiv2Schema)]
 pub struct Devices {
     /// The devices.
     devices: Vec<Device>,
@@ -21,14 +22,14 @@ impl Devices {
 }
 
 /// An endpoint.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Apiv2Schema)]
 pub struct Device {
     /// Name of the device as configured by the user.
     name: String,
 }
 
 /// Get a list of all endpoints.
-#[get("/devices")]
+#[api_v2_operation]
 pub async fn get_devices(_path: Path<()>, storage: Data<Storage>) -> Result<HttpResponse, Error> {
     // Get the devices from the database or use the default
     let devices = storage
@@ -40,7 +41,7 @@ pub async fn get_devices(_path: Path<()>, storage: Data<Storage>) -> Result<Http
 }
 
 /// Register a new endpoint.
-#[post("/devices")]
+#[api_v2_operation]
 pub async fn post_devices(
     device: Json<Device>,
     storage: Data<Storage>,

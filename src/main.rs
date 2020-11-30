@@ -8,12 +8,13 @@ mod password;
 mod store;
 
 use crate::{crypto::KeypairExt, net::TorGuard, store::StorageBuilder};
-use actix_web::{middleware::Logger, web, App, HttpServer};
+use actix_web::{middleware::Logger, App, HttpServer};
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
 use config::Config;
 use ed25519_dalek::Keypair;
 use log::LevelFilter;
+use paperclip::actix::{web, OpenApiExt};
 use std::net::{Ipv4Addr, SocketAddrV4};
 use syslog::Facility;
 
@@ -64,14 +65,16 @@ async fn main() -> Result<()> {
             .data(storage.clone())
             // Use the default logging service
             .wrap(Logger::default())
+            // Use the paperclip API service
+            .wrap_api()
             .service(
-                web::scope("/")
-                    .service(device::post_devices)
-                    .service(device::get_devices)
-                    .service(password::post_passwords)
-                    .service(password::get_passwords)
+                web::resource("/devices")
+                    .route(web::get().to(device::get_devices))
+                    .route(web::post().to(device::post_devices))
                     .guard(TorGuard),
             )
+            // Expose the JSON OpenAPI spec
+            .with_json_spec_at("/api/spec")
     })
     .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port()))?
     .run()

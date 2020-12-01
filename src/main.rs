@@ -75,6 +75,8 @@ async fn main() -> Result<()> {
             )
             // Expose the JSON OpenAPI spec
             .with_json_spec_at("/api/spec")
+            // Paperclip requires us to build the app
+            .build()
     })
     .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port()))?
     .run()

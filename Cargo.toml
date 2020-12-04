@@ -15,7 +15,7 @@ maintenance = { status = "experimental" }
 [dependencies]
 actix-storage = { version = "0.1.1", features = ["serde-json"] }
 actix-storage-sled = "0.1.1"
-actix-web = "3.3.1"
+actix-web = "3.3.2"
 anyhow = "1.0.34"
 clap = "3.0.0-beta.2"
 ed25519-dalek = "1.0.1"
@@ -27,6 +27,8 @@ syslog = "5.0.0"
 toml = "0.5.7"
 
 [dev-dependencies]
+actix-rt = "1.1.1"
+actix-storage-hashmap = "0.1.1"
 tempfile = "3.1.0"
 
 # Crash on panics instead of trying to mitigate the problems

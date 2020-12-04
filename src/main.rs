@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod app;
 mod config;
 mod crypto;
 mod device;
@@ -7,14 +8,14 @@ mod net;
 mod password;
 mod store;
 
-use crate::{crypto::KeypairExt, net::TorGuard, store::StorageBuilder};
+use crate::{crypto::KeypairExt, store::StorageBuilder};
 use actix_web::{middleware::Logger, App, HttpServer};
 use anyhow::Result;
 use clap::{clap_app, crate_authors, crate_description, crate_version};
 use config::Config;
 use ed25519_dalek::Keypair;
 use log::LevelFilter;
-use paperclip::actix::{web, OpenApiExt};
+use paperclip::actix::OpenApiExt;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use syslog::Facility;
 
@@ -61,18 +62,14 @@ async fn main() -> Result<()> {
     // Start the Tor server
     Ok(HttpServer::new(move || {
         App::new()
+            // Configure the routes and services
+            .configure(app::config_app)
             // Attach the database
             .data(storage.clone())
             // Use the default logging service
             .wrap(Logger::default())
             // Use the paperclip API service
             .wrap_api()
-            .service(
-                web::resource("/devices")
-                    .route(web::get().to(device::get_devices))
-                    .route(web::post().to(device::post_devices))
-                    .guard(TorGuard),
-            )
             // Expose the JSON OpenAPI spec
             .with_json_spec_at("/api/spec")
             // Paperclip requires us to build the app

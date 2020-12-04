@@ -77,7 +77,7 @@ mod tests {
     async fn test_devices() {
         let mut app = test::init_service(
             App::new()
-                .configure(app::config_app)
+                .configure(app::router)
                 .data(Storage::build().store(HashMapStore::new()).finish()),
         )
         .await;

@@ -11,11 +11,14 @@ mod store;
 use crate::{crypto::KeypairExt, store::StorageBuilder};
 use actix_web::{middleware::Logger, App, HttpServer};
 use anyhow::Result;
-use clap::{clap_app, crate_authors, crate_description, crate_version};
+use clap::clap_app;
 use config::Config;
 use ed25519_dalek::Keypair;
 use log::LevelFilter;
-use paperclip::actix::OpenApiExt;
+use paperclip::{
+    actix::OpenApiExt,
+    v2::models::{DefaultApiRaw, Info},
+};
 use std::net::{Ipv4Addr, SocketAddrV4};
 use syslog::Facility;
 
@@ -32,9 +35,9 @@ async fn main() -> Result<()> {
 
     // Parse the command line arguments
     let matches = clap_app!(keybear =>
-        (version: crate_version!())
-        (author: crate_authors!())
-        (about: crate_description!())
+        (version: clap::crate_version!())
+        (author: clap::crate_authors!())
+        (about: clap::crate_description!())
         (@arg CONFIG: -c --config +takes_value {file_exists} "Sets a custom config file")
     )
     .get_matches();
@@ -59,17 +62,26 @@ async fn main() -> Result<()> {
     // Setup the database
     let storage = StorageBuilder::new(config.database_path()).build()?;
 
+    // Define the API spec
+    let mut spec = DefaultApiRaw::default();
+    spec.info = Info {
+        version: clap::crate_version!().to_string(),
+        title: clap::crate_name!().to_string(),
+        description: Some(clap::crate_description!().to_string()),
+        ..Default::default()
+    };
+
     // Start the Tor server
     Ok(HttpServer::new(move || {
         App::new()
-            // Configure the routes and services
-            .configure(app::config_app)
             // Attach the database
             .data(storage.clone())
             // Use the default logging service
             .wrap(Logger::default())
             // Use the paperclip API service
-            .wrap_api()
+            .wrap_api_with_spec(spec.clone())
+            // Configure the routes and services
+            .configure(app::router)
             // Expose the JSON OpenAPI spec
             .with_json_spec_at("/api/spec")
             // Paperclip requires us to build the app

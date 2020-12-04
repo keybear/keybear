@@ -72,13 +72,12 @@ pub async fn post_passwords(
 
 #[cfg(test)]
 mod tests {
-    use crate::app;
     use actix_storage::Storage;
     use actix_storage_hashmap::HashMapStore;
     use actix_web::{
         http::StatusCode,
         test::{self, TestRequest},
-        web::Bytes,
+        web::{self, Bytes},
         App,
     };
 
@@ -86,7 +85,7 @@ mod tests {
     async fn test_devices() {
         let mut app = test::init_service(
             App::new()
-                .configure(app::router)
+                .service(web::resource("/passwords").route(web::get().to(super::get_passwords)))
                 .data(Storage::build().store(HashMapStore::new()).finish()),
         )
         .await;

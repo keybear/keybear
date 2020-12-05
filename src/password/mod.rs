@@ -8,7 +8,7 @@ use paperclip::actix::{
 use serde::{Deserialize, Serialize};
 
 /// All the passwords.
-#[derive(Debug, Default, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Apiv2Schema)]
 pub struct Passwords {
     /// The passwords.
     passwords: Vec<Password>,
@@ -19,10 +19,15 @@ impl Passwords {
     pub fn register(&mut self, password: Password) {
         self.passwords.push(password);
     }
+
+    /// Get the amount of passwords registered.
+    pub fn amount(&self) -> usize {
+        self.passwords.len()
+    }
 }
 
 /// A password entry.
-#[derive(Debug, Clone, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
 pub struct Password {
     /// Name of the password as configured by the user.
     name: String,
@@ -72,39 +77,56 @@ pub async fn post_passwords(
 
 #[cfg(test)]
 mod tests {
+    use super::{Password, Passwords};
     use actix_storage::Storage;
     use actix_storage_hashmap::HashMapStore;
-    use actix_web::{
-        http::StatusCode,
-        test::{self, TestRequest},
-        web::{self, Bytes},
-        App,
-    };
+    use actix_web::{http::Method, test, web, App};
 
     #[actix_rt::test]
-    async fn test_devices() {
+    async fn passwords() {
         let mut app = test::init_service(
             App::new()
                 .service(web::resource("/passwords").route(web::get().to(super::get_passwords)))
-                .data(Storage::build().store(HashMapStore::new()).finish()),
+                .data(Storage::build().store(HashMapStore::default()).finish()),
         )
         .await;
 
-        // Build a request to test our function
-        let req = TestRequest::get()
-            .uri("/passwords")
-            // The peer address must be localhost otherwise the Tor guard triggers
-            .peer_addr("127.0.0.1:1234".parse().unwrap())
-            .to_request();
+        // Request the passwords, empty list should be returned
+        let passwords: Passwords =
+            crate::test::perform_request(&mut app, "/passwords", Method::GET).await;
+        assert_eq!(passwords.amount(), 0);
+    }
 
-        // Perform the request and get the response
-        let resp = test::call_service(&mut app, req).await;
+    #[actix_rt::test]
+    async fn register() {
+        let mut app = test::init_service(
+            App::new()
+                .service(
+                    web::resource("/passwords")
+                        .route(web::get().to(super::get_passwords))
+                        .route(web::post().to(super::post_passwords)),
+                )
+                .data(Storage::build().store(HashMapStore::default()).finish()),
+        )
+        .await;
 
-        // Ensure that the path is accessed correctly
-        assert_eq!(resp.status(), StatusCode::OK);
+        // Setup a password to get the JSON from
+        let password = Password {
+            name: "test".to_string(),
+            password: "test_password".to_string(),
+            email: None,
+            website: None,
+        };
 
-        // An empty JSON array should be returned
-        let bytes = test::read_body(resp).await;
-        assert_eq!(bytes, Bytes::from_static(br##"{"passwords":[]}"##));
+        // Register the password
+        let registered: Password =
+            crate::test::perform_request_with_body(&mut app, "/passwords", Method::POST, &password)
+                .await;
+        assert_eq!(registered, password);
+
+        // Verify that the list of passwords is filled with it
+        let passwords: Passwords =
+            crate::test::perform_request(&mut app, "/passwords", Method::GET).await;
+        assert_eq!(passwords.amount(), 1);
     }
 }

@@ -8,7 +8,7 @@ use paperclip::actix::{
 use serde::{Deserialize, Serialize};
 
 /// A list of endpoints.
-#[derive(Debug, Default, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Apiv2Schema)]
 pub struct Devices {
     /// The devices.
     devices: Vec<Device>,
@@ -19,13 +19,20 @@ impl Devices {
     pub fn register(&mut self, device: Device) {
         self.devices.push(device);
     }
+
+    /// Get the amount of devices registered.
+    pub fn amount(&self) -> usize {
+        self.devices.len()
+    }
 }
 
 /// An endpoint.
-#[derive(Debug, Clone, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
 pub struct Device {
     /// Name of the device as configured by the user.
     name: String,
+    /// Public ED25519 key.
+    public_key: String,
 }
 
 /// Get a list of all device endpoints.
@@ -33,9 +40,11 @@ pub struct Device {
 pub async fn devices(storage: Data<Storage>) -> Result<Json<Devices>> {
     // Get the devices from the database or use the default
     let devices = storage
-        .get::<_, Devices>("devices")
+        .get("devices")
         .await?
         .unwrap_or_else(Devices::default);
+
+    dbg!(&devices);
 
     Ok(Json(devices))
 }
@@ -45,7 +54,7 @@ pub async fn devices(storage: Data<Storage>) -> Result<Json<Devices>> {
 pub async fn register(device: Json<Device>, storage: Data<Storage>) -> Result<CreatedJson<Device>> {
     // Get the devices from the database or use the default
     let mut devices = storage
-        .get::<_, Devices>("devices")
+        .get("devices")
         .await?
         .unwrap_or_else(Devices::default);
 
@@ -63,39 +72,51 @@ pub async fn register(device: Json<Device>, storage: Data<Storage>) -> Result<Cr
 
 #[cfg(test)]
 mod tests {
+    use super::{Device, Devices};
     use actix_storage::Storage;
     use actix_storage_hashmap::HashMapStore;
-    use actix_web::{
-        http::StatusCode,
-        test::{self, TestRequest},
-        web::{self, Bytes},
-        App,
-    };
+    use actix_web::{http::Method, test, web, App};
 
     #[actix_rt::test]
-    async fn test_devices() {
+    async fn devices() {
         let mut app = test::init_service(
             App::new()
                 .service(web::resource("/devices").route(web::get().to(super::devices)))
-                .data(Storage::build().store(HashMapStore::new()).finish()),
+                .data(Storage::build().store(HashMapStore::default()).finish()),
         )
         .await;
 
-        // Build a request to test our function
-        let req = TestRequest::get()
-            .uri("/devices")
-            // The peer address must be localhost otherwise the Tor guard triggers
-            .peer_addr("127.0.0.1:1234".parse().unwrap())
-            .to_request();
+        // Request the devices, empty list should be returned
+        let devices: Devices =
+            crate::test::perform_request(&mut app, "/devices", Method::GET).await;
+        assert_eq!(devices.amount(), 0);
+    }
 
-        // Perform the request and get the response
-        let resp = test::call_service(&mut app, req).await;
+    #[actix_rt::test]
+    async fn register() {
+        let mut app = test::init_service(
+            App::new()
+                .service(web::resource("/register").route(web::post().to(super::register)))
+                .service(web::resource("/devices").route(web::get().to(super::devices)))
+                .data(Storage::build().store(HashMapStore::default()).finish()),
+        )
+        .await;
 
-        // Ensure that the path is accessed correctly
-        assert_eq!(resp.status(), StatusCode::OK);
+        // Setup a device to get the JSON from
+        let device = Device {
+            name: "test".to_string(),
+            public_key: "test_key".to_string(),
+        };
 
-        // An empty JSON array should be returned
-        let bytes = test::read_body(resp).await;
-        assert_eq!(bytes, Bytes::from_static(br##"{"devices":[]}"##));
+        // Register the device
+        let registered: Device =
+            crate::test::perform_request_with_body(&mut app, "/register", Method::POST, &device)
+                .await;
+        assert_eq!(registered, device);
+
+        // Verify that the list of devices is filled with it
+        let devices: Devices =
+            crate::test::perform_request(&mut app, "/devices", Method::GET).await;
+        assert_eq!(devices.amount(), 1);
     }
 }

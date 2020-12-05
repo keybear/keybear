@@ -7,6 +7,8 @@ mod device;
 mod net;
 mod password;
 mod store;
+#[cfg(test)]
+mod test;
 
 use crate::{crypto::KeypairExt, store::StorageBuilder};
 use actix_web::{middleware::Logger, App, HttpServer};

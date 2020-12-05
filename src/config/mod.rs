@@ -136,4 +136,22 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn from_toml() -> Result<()> {
+        let config = Config::from_str(
+            r#"
+            key_path = "some_path"
+            database_path = "some_other_path"
+
+            [server]
+            port = 1234
+        "#,
+        )?;
+        assert_eq!(config.key_path(), Path::new("some_path"));
+        assert_eq!(config.database_path(), Path::new("some_other_path"));
+        assert_eq!(config.server_port(), 1234);
+
+        Ok(())
+    }
 }

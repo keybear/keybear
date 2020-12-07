@@ -148,3 +148,23 @@ where
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Encrypted;
+    use actix_service::{Service, Transform};
+    use actix_web::test::{ok_service, TestRequest};
+
+    #[actix_rt::test]
+    async fn errors() {
+        // Setup the encryption middleware
+        let mut middleware = Encrypted::default()
+            .new_transform(ok_service())
+            .await
+            .unwrap();
+
+        // Fake an empty request
+        let req = TestRequest::default().to_srv_request();
+        assert!(middleware.call(req).await.is_err());
+    }
+}

@@ -16,7 +16,7 @@ maintenance = { status = "experimental" }
 actix-storage = { version = "0.1.1", features = ["serde-json"] }
 actix-storage-sled = "0.1.1"
 actix-web = "3.3.2"
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 clap = "3.0.0-beta.2"
 ed25519-dalek = "1.0.1"
 log = "0.4.11"

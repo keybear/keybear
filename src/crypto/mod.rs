@@ -1,5 +1,6 @@
-use anyhow::{anyhow, Result};
-use ed25519_dalek::{Keypair, KEYPAIR_LENGTH};
+pub mod middleware;
+
+use anyhow::{anyhow, bail, Result};
 use log::{debug, info};
 use rand::rngs::OsRng;
 use std::{
@@ -7,19 +8,20 @@ use std::{
     io::Read,
     path::Path,
 };
+use x25519_dalek::StaticSecret;
 
-/// Add functions to the crypto keypair to make it easier to use.
-pub trait KeypairExt {
+/// Add functions to the crypto secret key to make it easier to use.
+pub trait StaticSecretExt {
     /// Check whether there is a file containing the crypto keys.
     fn verify_file<P>(file: P) -> bool
     where
         P: AsRef<Path>;
 
-    /// Generate a new keypair with the OS random number generator.
-    fn generate_with_os_rand() -> Keypair;
+    /// Generate a new secret key with the OS random number generator.
+    fn new_with_os_rand() -> StaticSecret;
 
     /// Try to load the crypto keys from our file on the disk.
-    fn from_file<P>(file: P) -> Result<Keypair>
+    fn from_file<P>(file: P) -> Result<StaticSecret>
     where
         P: AsRef<Path>;
 
@@ -29,7 +31,7 @@ pub trait KeypairExt {
         P: AsRef<Path>;
 
     /// Try to load the crypto key or generate a new one.
-    fn from_file_or_generate<P>(file: P) -> Result<Keypair>
+    fn from_file_or_generate<P>(file: P) -> Result<StaticSecret>
     where
         P: AsRef<Path>,
     {
@@ -38,7 +40,7 @@ pub trait KeypairExt {
             Self::from_file(file)
         } else {
             // The file doesn't exist, generate a new one and save it
-            let key = Self::generate_with_os_rand();
+            let key = Self::new_with_os_rand();
             key.save(file)?;
 
             Ok(key)
@@ -46,7 +48,7 @@ pub trait KeypairExt {
     }
 }
 
-impl KeypairExt for Keypair {
+impl StaticSecretExt for StaticSecret {
     fn verify_file<P>(file: P) -> bool
     where
         P: AsRef<Path>,
@@ -60,29 +62,29 @@ impl KeypairExt for Keypair {
         file.is_file()
     }
 
-    fn generate_with_os_rand() -> Keypair {
+    fn new_with_os_rand() -> StaticSecret {
         // Get the generic as the actual reference so it's traits can be used
-        info!("Generating new keypair");
+        info!("Generating new secret key");
 
         // Define a operating-system based random source
         let mut csprng = OsRng {};
 
-        // Generate a keypair
-        Keypair::generate(&mut csprng)
+        // Generate a secret key
+        StaticSecret::new(&mut csprng)
     }
 
-    fn from_file<P>(file: P) -> Result<Keypair>
+    fn from_file<P>(file: P) -> Result<StaticSecret>
     where
         P: AsRef<Path>,
     {
         // Get the generic as the actual reference so it's traits can be used
         let file = file.as_ref();
 
-        info!("Loading keypair from file \"{}\"", file.display());
+        info!("Loading secret key from file \"{}\"", file.display());
 
         // Cannot load from disk if the file is not a valid one
         if !Self::verify_file(file) {
-            return Err(anyhow!("Reading crypto keys from file {:?} failed", file));
+            bail!("Reading crypto keys from file {:?} failed", file);
         }
 
         // Read the file
@@ -90,7 +92,7 @@ impl KeypairExt for Keypair {
             .map_err(|err| anyhow!("Reading crypto keys from file {:?} failed: {}", file, err))?;
 
         // Read exactly the bytes from the file
-        let mut bytes = [0; KEYPAIR_LENGTH];
+        let mut bytes = [0; 32];
         f.read_exact(&mut bytes).map_err(|err| {
             anyhow!(
                 "Crypto keys file {:?} has wrong size, it might be corrupt: {}",
@@ -99,9 +101,8 @@ impl KeypairExt for Keypair {
             )
         })?;
 
-        // Try to construct the keypair from the bytes
-        Keypair::from_bytes(&bytes)
-            .map_err(|err| anyhow!("Crypto keys file {:?} is invalid: {}", file, err))
+        // Try to construct the secret key from the bytes
+        Ok(StaticSecret::from(bytes))
     }
 
     fn save<P>(&self, file: P) -> Result<()>
@@ -111,7 +112,7 @@ impl KeypairExt for Keypair {
         // Get the generic as the actual reference so it's traits can be used
         let file = file.as_ref();
 
-        info!("Saving keypair to file \"{}\"", file.display());
+        info!("Saving secret key to file \"{}\"", file.display());
 
         // Try to write the keys as raw bytes to the disk
         fs::write(file, self.to_bytes())
@@ -121,14 +122,30 @@ impl KeypairExt for Keypair {
 
 #[cfg(test)]
 mod tests {
-    use crate::crypto::KeypairExt;
+    use crate::crypto::StaticSecretExt;
     use anyhow::Result;
-    use ed25519_dalek::Keypair;
+    use x25519_dalek::StaticSecret;
+
+    #[test]
+    fn default() -> Result<()> {
+        // Create a temporary directory for the test database
+        let dir = tempfile::tempdir()?;
+        // Create the temporary file to save the key in
+        let file = dir.path().join("key");
+
+        // Try to load the file, which will fail and generate a new file
+        StaticSecret::from_file_or_generate(file)?;
+
+        Ok(())
+    }
 
     #[test]
     fn verify() {
         // A non-existing file means it's not a valid file for the keys
-        assert_eq!(Keypair::verify_file("/definitily/should/not/exist"), false);
+        assert_eq!(
+            StaticSecret::verify_file("/definitily/should/not/exist"),
+            false
+        );
     }
 
     #[test]
@@ -139,16 +156,16 @@ mod tests {
         let file = dir.path().join("key");
 
         // Generate a new pair of keys.
-        let keypair = Keypair::generate_with_os_rand();
+        let secret = StaticSecret::new_with_os_rand();
 
-        // Save the keypair
-        keypair.save(&file)?;
+        // Save the secret key
+        secret.save(&file)?;
 
-        // Load the saved keypair from disk
-        let disk_keypair = Keypair::from_file(file)?;
+        // Load the saved secret key from disk
+        let disk_secret = StaticSecret::from_file(file)?;
 
         // Check if they are the same
-        assert_eq!(keypair.to_bytes(), disk_keypair.to_bytes());
+        assert_eq!(secret.to_bytes(), disk_secret.to_bytes());
 
         // Close the directory
         dir.close()?;

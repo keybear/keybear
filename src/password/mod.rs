@@ -1,4 +1,4 @@
-use actix_storage::Storage;
+use crate::app::AppState;
 use actix_web::Result;
 use paperclip::actix::{
     api_v2_operation,
@@ -41,9 +41,12 @@ pub struct Password {
 
 /// Get a list of all passwords.
 #[api_v2_operation]
-pub async fn get_passwords(storage: Data<Storage>) -> Result<Json<Passwords>> {
+pub async fn get_passwords(state: Data<AppState>) -> Result<Json<Passwords>> {
     // Get the passwords from the database or use the default
-    let passwords = storage
+    let passwords = state
+        .storage
+        .lock()
+        .unwrap()
         .get::<_, Passwords>("passwords")
         .await?
         .unwrap_or_else(Passwords::default);
@@ -55,8 +58,11 @@ pub async fn get_passwords(storage: Data<Storage>) -> Result<Json<Passwords>> {
 #[api_v2_operation]
 pub async fn post_passwords(
     password: Json<Password>,
-    storage: Data<Storage>,
+    state: Data<AppState>,
 ) -> Result<CreatedJson<Password>> {
+    // Get a mutex lock on the storage
+    let storage = state.storage.lock().unwrap();
+
     // Get the passwords from the database or use the default
     let mut passwords = storage
         .get::<_, Passwords>("passwords")
@@ -78,8 +84,6 @@ pub async fn post_passwords(
 #[cfg(test)]
 mod tests {
     use super::{Password, Passwords};
-    use actix_storage::Storage;
-    use actix_storage_hashmap::HashMapStore;
     use actix_web::{http::Method, test, web, App};
 
     #[actix_rt::test]
@@ -87,7 +91,7 @@ mod tests {
         let mut app = test::init_service(
             App::new()
                 .service(web::resource("/passwords").route(web::get().to(super::get_passwords)))
-                .data(Storage::build().store(HashMapStore::default()).finish()),
+                .app_data(crate::test::app_state()),
         )
         .await;
 
@@ -106,7 +110,7 @@ mod tests {
                         .route(web::get().to(super::get_passwords))
                         .route(web::post().to(super::post_passwords)),
                 )
-                .data(Storage::build().store(HashMapStore::default()).finish()),
+                .app_data(crate::test::app_state()),
         )
         .await;
 

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use log::debug;
+use log::info;
 use serde::Deserialize;
 use std::{fmt::Debug, fs, path::Path};
 
@@ -14,7 +14,7 @@ pub const DEFAULT_DATABASE_PATH: &str = "/var/lib/keybear/db";
 pub const DEFAULT_SERVER_PORT: u16 = 52477;
 
 /// The application configuration.
-#[derive(Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, Deserialize)]
 pub struct Config {
     /// Location of the file containing the secret key.
     key_path: Option<String>,
@@ -30,6 +30,11 @@ impl Config {
     /// If the file doesn't exist use a default configuration.
     pub fn from_default_file_or_empty() -> Result<Self> {
         if Path::new(DEFAULT_CONFIG_FILE_PATH).exists() {
+            info!(
+                "Configuration found in default path \"{}\"",
+                DEFAULT_CONFIG_FILE_PATH
+            );
+
             // The configuration file exists, try to load it
             Self::from_file(DEFAULT_CONFIG_FILE_PATH)
         } else {
@@ -46,7 +51,7 @@ impl Config {
         // Get the generic as the actual reference so it's traits can be used
         let file = file.as_ref();
 
-        debug!("Reading configuration file {:?}", file);
+        info!("Loading configuration file {:?}", file);
 
         // Attempt to open the configuration file
         let contents = fs::read_to_string(file)

@@ -1,12 +1,26 @@
+use crate::{app::AppState, crypto::StaticSecretExt};
 use actix_http::Request;
+use actix_storage::Storage;
+use actix_storage_hashmap::HashMapStore;
 use actix_web::{
     body::MessageBody,
     dev::{Service, ServiceResponse},
     http::Method,
     test::{self, TestRequest},
+    web::Data,
 };
 use serde::{de::DeserializeOwned, Serialize};
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Mutex};
+use x25519_dalek::StaticSecret;
+
+/// Generate a default application state.
+pub fn app_state() -> Data<AppState> {
+    Data::new(AppState {
+        secret_key: StaticSecret::new_with_os_rand(),
+        // Use a simple in-memory hashmap storage
+        storage: Mutex::new(Storage::build().store(HashMapStore::default()).finish()),
+    })
+}
 
 /// Perform a request without a body and get the result back.
 pub async fn perform_request<S, B, E, T>(app: &mut S, path: &str, method: Method) -> T

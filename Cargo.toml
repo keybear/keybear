@@ -22,7 +22,7 @@ ed25519-dalek = "1.0.1"
 log = "0.4.11"
 paperclip = { version = "0.5.0", features = ["actix"] }
 rand = "0.7.3"
-serde = { version = "1.0.117", features = ["derive"] }
+serde = { version = "1.0.118", features = ["derive"] }
 syslog = "5.0.0"
 toml = "0.5.7"
 

@@ -137,7 +137,7 @@ where
             }
 
             // Encrypt the body if applicable
-            if body.len() > 0 {
+            if !body.is_empty() {
                 dbg!(body);
             }
 
@@ -151,7 +151,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::Encrypted;
+    use crate::{
+        crypto::middleware::{Encrypted, CLIENT_ID_HEADER, CLIENT_VERIFICATION_HEADER},
+        test,
+    };
     use actix_service::{Service, Transform};
     use actix_web::test::{ok_service, TestRequest};
 
@@ -164,7 +167,19 @@ mod tests {
             .unwrap();
 
         // Fake an empty request
-        let req = TestRequest::default().to_srv_request();
+        let req = TestRequest::default()
+            .app_data(test::app_state())
+            .to_srv_request();
+        // This should fail because the required headers are missing
+        assert!(middleware.call(req).await.is_err());
+
+        // Add the proper headers
+        let req = TestRequest::default()
+            .header(CLIENT_ID_HEADER, "test")
+            .header(CLIENT_VERIFICATION_HEADER, "keybear")
+            .app_data(test::app_state())
+            .to_srv_request();
+        // This should fail because the device doesn't exist
         assert!(middleware.call(req).await.is_err());
     }
 }

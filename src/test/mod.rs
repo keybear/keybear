@@ -73,7 +73,12 @@ where
     let resp = app.call(req).await.unwrap();
 
     // Ensure that the path is accessed correctly
-    assert!(resp.status().is_success());
+    assert!(
+        resp.status().is_success(),
+        "Response status {} incorrect with body: {:?}",
+        resp.status().as_str(),
+        test::read_body(resp).await,
+    );
 
     // Extract the JSON response
     test::read_body_json(resp).await

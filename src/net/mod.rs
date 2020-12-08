@@ -26,7 +26,8 @@ pub fn is_valid_client_ip(ip: IpAddr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::net;
+    use crate::net::{self, TorGuard};
+    use actix_web::{guard::Guard, test::TestRequest};
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
     #[test]
@@ -41,5 +42,28 @@ mod tests {
         assert!(!net::is_valid_client_ip("192.168.1.1".parse().unwrap()));
         assert!(!net::is_valid_client_ip("127.1.0.1".parse().unwrap()));
         assert!(!net::is_valid_client_ip("127.0.0.0".parse().unwrap()));
+    }
+
+    #[actix_rt::test]
+    async fn tor_guard_ip() {
+        let guard = TorGuard {};
+
+        let req = TestRequest::default()
+            // This is an IP the Tor service might have
+            .peer_addr("127.0.0.1:52477".parse().unwrap())
+            .to_http_request();
+        assert!(guard.check(req.head()));
+
+        let req = TestRequest::default()
+            // This is an external IP, which should be ignored
+            .peer_addr("192.168.1.2:52477".parse().unwrap())
+            .to_http_request();
+        assert!(!guard.check(req.head()));
+
+        let req = TestRequest::default()
+            // Ipv6 addresses should also be ignored
+            .peer_addr("[::1]:52477".parse().unwrap())
+            .to_http_request();
+        assert!(!guard.check(req.head()));
     }
 }

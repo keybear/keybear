@@ -8,6 +8,7 @@ use crate::{
     store::StorageBuilder,
 };
 use actix_storage::Storage;
+use actix_web::Result as WebResult;
 use anyhow::Result;
 use paperclip::actix::web::{self, ServiceConfig};
 use std::sync::Mutex;
@@ -37,7 +38,7 @@ impl AppState {
     }
 
     /// Set the devices.
-    pub async fn set_devices(&self, devices: Devices) -> actix_web::Result<()> {
+    pub async fn set_devices(&self, devices: Devices) -> WebResult<()> {
         // Get a mutex lock on the storage
         let storage = self.storage.lock().unwrap();
 
@@ -48,7 +49,7 @@ impl AppState {
     }
 
     /// Get the devices from the database.
-    pub async fn devices(&self) -> actix_web::Result<Devices> {
+    pub async fn devices(&self) -> WebResult<Devices> {
         // Get a mutex lock on the storage
         let storage = self.storage.lock().unwrap();
 

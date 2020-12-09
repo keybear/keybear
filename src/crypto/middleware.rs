@@ -21,8 +21,6 @@ use std::{
 
 /// The required HTTP header containing the client ID.
 const CLIENT_ID_HEADER: &str = "keybear-client-id";
-/// The required HTTP header containing the client verification, encrypted using the shared key.
-const CLIENT_VERIFICATION_HEADER: &str = "keybear-client-verification";
 
 /// Actix middleware for using X25519 encrypted JSON messages.
 #[derive(Debug, Default)]
@@ -96,31 +94,13 @@ where
                 )));
             };
 
-            // Try to find the client verification header
-            let verification = if let Some(verification) =
-                headers.iter().find_map(|(name, value)| {
-                    if name == CLIENT_VERIFICATION_HEADER {
-                        value.to_str().ok()
-                    } else {
-                        None
-                    }
-                }) {
-                verification
-            } else {
-                // Throw an error the header is not found
-                return Err(ErrorUnauthorized(format!(
-                    "\"{}\" header is missing or misformatted",
-                    CLIENT_VERIFICATION_HEADER
-                )));
-            };
-
             debug!("Received message from client with ID \"{:?}\"", id);
 
             // Verify the request
             if let Some(state) = req.app_data::<Data<AppState>>() {
-                if !state.devices().await?.verify(id, verification) {
+                if !state.devices().await?.verify(id) {
                     // Throw an error when the device can't be verified
-                    return Err(ErrorUnauthorized("Device verification failed"));
+                    return Err(ErrorUnauthorized("Device has invalid client id"));
                 }
             } else {
                 // Throw an error when the application state isn't registered yet
@@ -152,7 +132,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        crypto::middleware::{Encrypted, CLIENT_ID_HEADER, CLIENT_VERIFICATION_HEADER},
+        crypto::middleware::{Encrypted, CLIENT_ID_HEADER},
         test,
     };
     use actix_service::{Service, Transform};
@@ -176,7 +156,6 @@ mod tests {
         // Add the proper headers
         let req = TestRequest::default()
             .header(CLIENT_ID_HEADER, "test")
-            .header(CLIENT_VERIFICATION_HEADER, "keybear")
             .app_data(test::app_state())
             .to_srv_request();
         // This should fail because the device doesn't exist

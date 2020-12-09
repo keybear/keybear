@@ -11,9 +11,6 @@ use std::convert::TryInto;
 use uuid::Uuid;
 use x25519_dalek::PublicKey;
 
-/// The string used to verify a device.
-const DEVICE_VERIFICATION: &str = "keybear";
-
 /// A list of endpoints.
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Devices {
@@ -27,14 +24,10 @@ impl Devices {
         self.devices.push(device);
     }
 
-    /// Verify a device.
-    pub fn verify(&self, id: &str, verification: &str) -> bool {
+    /// Check if a device with the ID exists.
+    pub fn verify(&self, id: &str) -> bool {
         // Find the device by ID
-        if let Some(device) = self.devices.iter().find(|device| device.id == id) {
-            device.verify(verification)
-        } else {
-            false
-        }
+        self.devices.iter().find(|device| device.id == id).is_some()
     }
 
     /// Get a vector of devices as allowed to be shown to the clients.
@@ -58,12 +51,6 @@ pub struct Device {
 }
 
 impl Device {
-    /// Verify the verification string with this client.
-    pub fn verify(&self, verification: &str) -> bool {
-        // TODO: use the encrypted verification
-        verification == DEVICE_VERIFICATION
-    }
-
     /// Create a public view device of this device.
     pub fn to_public_device(&self) -> PublicDevice {
         PublicDevice {

@@ -98,33 +98,33 @@ where
 
             // Verify the request
             if let Some(state) = req.app_data::<Data<AppState>>() {
-                if !state.devices().await?.verify(id) {
+                if let Some(device) = state.devices().await?.find(id) {
+                    // Capture the request body to encrypt it
+                    let mut body = BytesMut::new();
+                    let mut stream = req.take_payload();
+                    while let Some(chunk) = stream.next().await {
+                        body.extend_from_slice(&chunk?);
+                    }
+
+                    // Decrypt the body if applicable
+                    if !body.is_empty() {
+                        dbg!(body);
+                    }
+
+                    // Handle the request
+                    let res = service.call(req).await?;
+
+                    Ok(res)
+                } else {
                     // Throw an error when the device can't be verified
-                    return Err(ErrorUnauthorized("Device has invalid client id"));
+                    Err(ErrorUnauthorized("Device has invalid client id"))
                 }
             } else {
                 // Throw an error when the application state isn't registered yet
-                return Err(ErrorInternalServerError(
+                Err(ErrorInternalServerError(
                     "Application state is not registered",
-                ));
-            };
-
-            // Capture the request body to encrypt it
-            let mut body = BytesMut::new();
-            let mut stream = req.take_payload();
-            while let Some(chunk) = stream.next().await {
-                body.extend_from_slice(&chunk?);
+                ))
             }
-
-            // Encrypt the body if applicable
-            if !body.is_empty() {
-                dbg!(body);
-            }
-
-            // Handle the request
-            let res = service.call(req).await?;
-
-            Ok(res)
         })
     }
 }

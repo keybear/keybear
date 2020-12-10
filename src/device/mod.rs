@@ -9,7 +9,7 @@ use paperclip::actix::{
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use uuid::Uuid;
-use x25519_dalek::PublicKey;
+use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
 /// A list of endpoints.
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -25,9 +25,9 @@ impl Devices {
     }
 
     /// Check if a device with the ID exists.
-    pub fn verify(&self, id: &str) -> bool {
+    pub fn find(&self, id: &str) -> Option<&Device> {
         // Find the device by ID
-        self.devices.iter().find(|device| device.id == id).is_some()
+        self.devices.iter().find(|device| device.id == id)
     }
 
     /// Get a vector of devices as allowed to be shown to the clients.
@@ -58,6 +58,20 @@ impl Device {
             name: self.name.clone(),
         }
     }
+
+    /// Create the result when registering a new device.
+    pub fn to_register_device_result(&self, server_key: &StaticSecret) -> RegisterDeviceResult {
+        RegisterDeviceResult {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            server_public_key: base64::encode(PublicKey::from(server_key).as_bytes()),
+        }
+    }
+
+    /// Get the shared key to communicate with this device.
+    pub fn shared_key(&self, server_key: &StaticSecret) -> SharedSecret {
+        server_key.diffie_hellman(&self.public_key)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
@@ -85,14 +99,28 @@ impl RegisterDevice {
             .context("Device public key is invalid")?
             .try_into()
             .map_err(|_| anyhow!("Device public key is invalid"))?;
+        let public_key = PublicKey::from(bytes);
+
+        // Generate a new unique identifier
+        let id = Uuid::new_v4().to_simple().to_string();
 
         Ok(Device {
-            // Generate a new unique identifier
-            id: Uuid::new_v4().to_simple().to_string(),
             name: self.name.clone(),
-            public_key: PublicKey::from(bytes),
+            id,
+            public_key,
         })
     }
+}
+
+/// The result from successfully registering a device.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+pub struct RegisterDeviceResult {
+    /// Unique identifier.
+    id: String,
+    /// Name of the device as configured by the user.
+    name: String,
+    /// The public key of the server.
+    server_public_key: String,
 }
 
 /// Get a list of all device endpoints.
@@ -106,7 +134,7 @@ pub async fn devices(state: Data<AppState>) -> WebResult<Json<Vec<PublicDevice>>
 pub async fn register(
     register_device: Json<RegisterDevice>,
     state: Data<AppState>,
-) -> WebResult<CreatedJson<PublicDevice>> {
+) -> WebResult<CreatedJson<RegisterDeviceResult>> {
     // Get the list of devices from the state
     let mut devices = state.devices().await?;
 
@@ -125,7 +153,9 @@ pub async fn register(
     state.set_devices(devices).await?;
 
     // Return a view of the device
-    Ok(CreatedJson(device.to_public_device()))
+    Ok(CreatedJson(
+        device.to_register_device_result(&state.secret_key),
+    ))
 }
 
 #[cfg(test)]

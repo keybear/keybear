@@ -97,7 +97,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="installation/installation.html"><strong aria-hidden="true">1.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="installation/deb.html"><strong aria-hidden="true">1.1.</strong> Build Debian Package</a></li><li class="chapter-item expanded "><a href="installation/manually.html"><strong aria-hidden="true">1.2.</strong> With Cargo Install</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="installation/installation.html"><strong aria-hidden="true">1.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="installation/deb.html"><strong aria-hidden="true">1.1.</strong> Build Debian Package</a></li><li class="chapter-item expanded "><a href="installation/manually.html"><strong aria-hidden="true">1.2.</strong> With Cargo Install</a></li></ol></li><li class="chapter-item expanded "><a href="cryptography.html"><strong aria-hidden="true">2.</strong> Cryptography</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -242,6 +242,8 @@ sudo systemctl start keybear.service
 <p>Verify that the service is running:</p>
 <pre><code class="language-bash">sudo systemctl status keybear.service
 </code></pre>
+<h1><a class="header" href="#cryptography" id="cryptography">Cryptography</a></h1>
+<p>Whenever a device is registered public <a href="https://github.com/dalek-cryptography/x25519-dalek">X25519</a> keys are exchanged between the server and the client. All communication from this point on is encrypted with the <a href="https://github.com/RustCrypto/AEADs/tree/master/chacha20poly1305">ChaCha20Poly1305</a> cipher using a generated X25519 shared key as the ChaCha20 key.</p>
 
                     </main>
 

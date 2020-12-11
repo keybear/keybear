@@ -9,12 +9,12 @@ repository = "https://github.com/keybear/keybear"
 description = "Self-hosted password manager"
 include = ["src/**/*", "LICENSE", "README.md"]
 
+[badges]
+maintenance = { status = "experimental" }
+
 [lib]
 name = "lib"
 path = "src/lib.rs"
-
-[badges]
-maintenance = { status = "experimental" }
 
 [dependencies]
 actix-http = "2.2.0"
@@ -41,6 +41,15 @@ actix-http = "2.2.0"
 actix-rt = "1.1.1"
 actix-storage-hashmap = "0.1.1"
 tempfile = "3.1.0"
+
+[features]
+# We have to define the test as a feature otherwise the module won't be exported
+test = []
+
+[[test]]
+name = "register"
+path = "tests/register.rs"
+required-features = ["test"]
 
 # Crash on panics instead of trying to mitigate the problems
 [profile.release]

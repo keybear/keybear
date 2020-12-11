@@ -7,10 +7,21 @@ use crate::{
     password,
     store::StorageBuilder,
 };
+use actix_service::ServiceFactory;
 use actix_storage::Storage;
-use actix_web::Result as WebResult;
+use actix_web::{
+    body::MessageBody,
+    dev::{ServiceRequest, ServiceResponse},
+    App, Error, Result as WebResult,
+};
 use anyhow::Result;
-use paperclip::actix::web::{self, ServiceConfig};
+use paperclip::{
+    actix::{
+        web::{self, Data, ServiceConfig},
+        OpenApiExt,
+    },
+    v2::models::{DefaultApiRaw, Info},
+};
 use std::sync::Mutex;
 use x25519_dalek::StaticSecret;
 
@@ -59,6 +70,40 @@ impl AppState {
             .await?
             .unwrap_or_else(Devices::default))
     }
+}
+
+/// Create the server app.
+pub fn fill_app<T, B>(app: App<T, B>, app_state: &Data<AppState>) -> App<T, B>
+where
+    B: MessageBody,
+    T: ServiceFactory<
+        Config = (),
+        Request = ServiceRequest,
+        Response = ServiceResponse<B>,
+        Error = Error,
+        InitError = (),
+    >,
+{
+    // Define the API spec
+    let mut spec = DefaultApiRaw::default();
+    spec.info = Info {
+        version: clap::crate_version!().to_string(),
+        title: clap::crate_name!().to_string(),
+        description: Some(clap::crate_description!().to_string()),
+        ..Default::default()
+    };
+
+    app
+        // Attach the database
+        .app_data(app_state.clone())
+        // Use the paperclip API service
+        .wrap_api_with_spec(spec.clone())
+        // Configure the routes and services
+        .configure(router)
+        // Expose the JSON OpenAPI spec
+        .with_json_spec_at("/api/spec")
+        // Paperclip requires us to build the app
+        .build()
 }
 
 /// Create the actix app with all routes and services.

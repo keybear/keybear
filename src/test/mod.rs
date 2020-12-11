@@ -1,17 +1,37 @@
-use crate::{app::AppState, crypto::StaticSecretExt};
+use crate::{
+    app::{self, AppState},
+    crypto::StaticSecretExt,
+};
 use actix_http::Request;
+use actix_service::ServiceFactory;
 use actix_storage::Storage;
 use actix_storage_hashmap::HashMapStore;
 use actix_web::{
     body::MessageBody,
-    dev::{Service, ServiceResponse},
+    dev::{Service, ServiceRequest, ServiceResponse},
     http::Method,
     test::{self, TestRequest},
     web::Data,
+    App, Error,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, sync::Mutex};
 use x25519_dalek::StaticSecret;
+
+/// Generate a default app with all routes.
+pub fn fill_app<T, B>(app: App<T, B>) -> App<T, B>
+where
+    B: MessageBody,
+    T: ServiceFactory<
+        Config = (),
+        Request = ServiceRequest,
+        Response = ServiceResponse<B>,
+        Error = Error,
+        InitError = (),
+    >,
+{
+    app::fill_app(app, &app_state())
+}
 
 /// Generate a default application state.
 pub fn app_state() -> Data<AppState> {

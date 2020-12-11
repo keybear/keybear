@@ -1,4 +1,4 @@
-use crate::app::AppState;
+use crate::{app::AppState, crypto};
 use actix_web::{error::ErrorInternalServerError, Result as WebResult};
 use anyhow::{anyhow, Context, Result};
 use paperclip::actix::{
@@ -68,8 +68,18 @@ impl Device {
         }
     }
 
+    /// Encrypt a message to send.
+    pub fn encrypt(&self, server_key: &StaticSecret, message: &str) -> Result<Vec<u8>> {
+        crypto::encrypt(&self.shared_key(server_key), message)
+    }
+
+    /// Decrypt a message to receive.
+    pub fn decrypt(&self, server_key: &StaticSecret, cipher_bytes: &[u8]) -> Result<String> {
+        crypto::decrypt(&self.shared_key(server_key), cipher_bytes)
+    }
+
     /// Get the shared key to communicate with this device.
-    pub fn shared_key(&self, server_key: &StaticSecret) -> SharedSecret {
+    fn shared_key(&self, server_key: &StaticSecret) -> SharedSecret {
         server_key.diffie_hellman(&self.public_key)
     }
 }

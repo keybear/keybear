@@ -1,10 +1,13 @@
-use crate::app::AppState;
+use crate::{app::AppState, device::Device};
+use actix_http::{h1::Payload as H1Payload, Payload};
 use actix_service::{Service, Transform};
 use actix_web::{
-    dev::{ServiceRequest, ServiceResponse},
+    body::Body,
+    dev::{MessageBody, ResponseBody, ServiceRequest, ServiceResponse},
     error::{ErrorInternalServerError, ErrorUnauthorized},
-    Error, HttpMessage,
+    Error,
 };
+use anyhow::{anyhow, Result};
 use futures::{
     future::{ok, Ready},
     stream::StreamExt,
@@ -18,6 +21,7 @@ use std::{
     rc::Rc,
     task::{Context, Poll},
 };
+use x25519_dalek::StaticSecret;
 
 /// The required HTTP header containing the client ID.
 const CLIENT_ID_HEADER: &str = "keybear-client-id";
@@ -30,7 +34,7 @@ impl<S, B> Transform<S> for Encrypted
 where
     S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
-    B: 'static,
+    B: MessageBody + Unpin,
 {
     type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
@@ -58,7 +62,7 @@ impl<S, B> Service for EncryptedMiddleware<S>
 where
     S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
-    B: 'static,
+    B: MessageBody + Unpin,
 {
     type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
@@ -69,11 +73,11 @@ where
         self.service.poll_ready(cx)
     }
 
-    fn call(&mut self, mut req: ServiceRequest) -> Self::Future {
+    fn call(&mut self, req: ServiceRequest) -> Self::Future {
         // Clone the service so we can move it to the boxed async block
         let mut service = self.service.clone();
 
-        // Handle the response
+        // First read decrypt the request, then encrypt the response
         Box::pin(async move {
             let headers = req.headers();
 
@@ -96,25 +100,53 @@ where
 
             debug!("Received message from client with ID \"{:?}\"", id);
 
-            // Verify the request
             if let Some(state) = req.app_data::<Data<AppState>>() {
+                // Clone the secret key because the request will be consumed before it can be used
+                let secret_key = state.secret_key.clone();
+
                 if let Some(device) = state.devices().await?.find(id) {
+                    // Split it into the HTTP request and the payload
+                    let (http_request, mut payload) = req.into_parts();
+
                     // Capture the request body to encrypt it
                     let mut body = BytesMut::new();
-                    let mut stream = req.take_payload();
-                    while let Some(chunk) = stream.next().await {
+                    while let Some(chunk) = payload.next().await {
                         body.extend_from_slice(&chunk?);
                     }
 
-                    // Decrypt the body if applicable
-                    if !body.is_empty() {
-                        dbg!(body);
-                    }
+                    // Decrypt the body if applicable and create a new payload
+                    let message = if !body.is_empty() {
+                        // Decrypt the message contained in the body
+                        device
+                            .decrypt(&secret_key, &body)
+                            .map_err(|err| ErrorUnauthorized(err))?
+                    } else {
+                        // Use an empty string as the body
+                        String::new()
+                    };
+
+                    // TODO: decrypt incoming message
+                    dbg!(message);
+
+                    // Construct the payload
+                    let payload = {
+                        let mut payload = H1Payload::empty();
+                        payload.unread_data(body.freeze());
+
+                        Payload::H1(payload)
+                    };
+
+                    // Reconstruct the request
+                    let req = ServiceRequest::from_parts(http_request, payload)
+                        .map_err(|_| ErrorInternalServerError("Cannot reconstruct request"))?;
 
                     // Handle the request
                     let res = service.call(req).await?;
 
-                    Ok(res)
+                    // Encrypt the response
+                    Ok(encrypt_response(res, &secret_key, device)
+                        .await
+                        .map_err(|err| ErrorInternalServerError(err))?)
                 } else {
                     // Throw an error when the device can't be verified
                     Err(ErrorUnauthorized("Device has invalid client id"))
@@ -127,6 +159,37 @@ where
             }
         })
     }
+}
+
+/// Encrypt the response.
+async fn encrypt_response<B>(
+    mut response: ServiceResponse<B>,
+    server_secret_key: &StaticSecret,
+    target_device: &Device,
+) -> Result<ServiceResponse<B>>
+where
+    B: MessageBody + Unpin,
+{
+    // Don't do anything with error messages
+    if !response.status().is_success() {
+        return Ok(response);
+    }
+
+    // Get the body from the response
+    let mut body = BytesMut::new();
+    let mut stream = response.take_body();
+    while let Some(chunk) = stream.next().await {
+        body.extend_from_slice(
+            &chunk.map_err(|err| anyhow!("Could not read response body: {}", err))?,
+        );
+    }
+    // Convert the body into a string
+    let body_string = String::from_utf8(body.to_vec())?;
+
+    // Encrypt the result
+    let result = target_device.encrypt(&server_secret_key, &body_string)?;
+
+    Ok(response.map_body(|_, _| ResponseBody::Other(Body::from(result))))
 }
 
 #[cfg(test)]

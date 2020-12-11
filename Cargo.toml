@@ -13,12 +13,14 @@ include = ["src/**/*", "LICENSE", "README.md"]
 maintenance = { status = "experimental" }
 
 [dependencies]
+actix-http = "2.2.0"
 actix-service = "1.0.6"
 actix-storage = { version = "0.1.1", features = ["serde-json"] }
 actix-storage-sled = "0.1.1"
 actix-web = "3.3.2"
 anyhow = "1.0.35"
 base64 = "0.13.0"
+chacha20poly1305 = "0.7.1"
 clap = "3.0.0-beta.2"
 futures = "0.3.8"
 log = "0.4.11"

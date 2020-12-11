@@ -1,6 +1,10 @@
 pub mod middleware;
 
 use anyhow::{anyhow, bail, Result};
+use chacha20poly1305::{
+    aead::{Aead, NewAead},
+    ChaCha20Poly1305, Key, Nonce,
+};
 use log::{debug, info};
 use rand::rngs::OsRng;
 use std::{
@@ -8,7 +12,7 @@ use std::{
     io::Read,
     path::Path,
 };
-use x25519_dalek::StaticSecret;
+use x25519_dalek::{SharedSecret, StaticSecret};
 
 /// Add functions to the crypto secret key to make it easier to use.
 pub trait StaticSecretExt {
@@ -120,11 +124,46 @@ impl StaticSecretExt for StaticSecret {
     }
 }
 
+/// Encrypt a string into a chacha20poly1305 encoded string.
+pub fn encrypt(shared_secret_key: &SharedSecret, message: &str) -> Result<Vec<u8>> {
+    // TODO exchange nonce messages
+    let nonce = Nonce::from_slice(b"unique nonce");
+
+    cipher(shared_secret_key)
+        // Encrypt the message
+        .encrypt(nonce, message.as_bytes())
+        .map_err(|err| anyhow!("Encrypting message: {}", err))
+}
+
+/// Decrypt a chacha20poly1305 encoded string.
+pub fn decrypt(shared_secret_key: &SharedSecret, cipher_bytes: &[u8]) -> Result<String> {
+    // TODO exchange nonce messages
+    let nonce = Nonce::from_slice(b"unique nonce");
+
+    cipher(shared_secret_key)
+        // Decrypt the message
+        .decrypt(nonce, cipher_bytes)
+        .map_err(|err| anyhow!("Decrypting message: {}", err))
+        // Try to parse it as an UTF-8 string
+        .map(|bytes| {
+            String::from_utf8(bytes)
+                .map_err(|err| anyhow!("Decrypting message string is not valid UTF8: {}", err))
+        })?
+}
+
+/// Create a cipher from the shared secret key of a client and the server.
+fn cipher(shared_secret_key: &SharedSecret) -> ChaCha20Poly1305 {
+    let key = Key::from_slice(shared_secret_key.as_bytes());
+
+    ChaCha20Poly1305::new(key)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::crypto::StaticSecretExt;
+    use crate::crypto::{self, StaticSecretExt};
     use anyhow::Result;
-    use x25519_dalek::StaticSecret;
+    use rand::rngs::OsRng;
+    use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
 
     #[test]
     fn default() -> Result<()> {
@@ -169,6 +208,27 @@ mod tests {
 
         // Close the directory
         dir.close()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn encrypt_decrypt() -> Result<()> {
+        // Generate a new shared key
+        let alice_secret = EphemeralSecret::new(OsRng);
+        let bob_secret = EphemeralSecret::new(OsRng);
+        let bob_public = PublicKey::from(&bob_secret);
+        let shared_secret = alice_secret.diffie_hellman(&bob_public);
+
+        let plaintext = "Oh hi Mark!";
+
+        // Encrypt a string
+        let cipher_bytes = crypto::encrypt(&shared_secret, plaintext)?;
+
+        // Decrypt the string
+        let decrypted = crypto::decrypt(&shared_secret, &cipher_bytes)?;
+
+        assert_eq!(plaintext, decrypted);
 
         Ok(())
     }

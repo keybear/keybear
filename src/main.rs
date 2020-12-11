@@ -1,29 +1,10 @@
 #![forbid(unsafe_code)]
 
-mod app;
-mod config;
-mod crypto;
-mod device;
-mod net;
-mod password;
-mod store;
-#[cfg(test)]
-mod test;
-
-use crate::app::AppState;
-use actix_web::{middleware::Logger, App, HttpServer};
 use anyhow::Result;
 use clap::clap_app;
-use config::Config;
-use log::LevelFilter;
-use paperclip::{
-    actix::{web::Data, OpenApiExt},
-    v2::models::{DefaultApiRaw, Info},
-};
-use std::{
-    fs,
-    net::{Ipv4Addr, SocketAddrV4},
-};
+use lib::config::Config;
+use log::{error, LevelFilter};
+use std::fs;
 use syslog::Facility;
 
 #[actix_web::main]
@@ -57,40 +38,10 @@ async fn main() -> Result<()> {
         None => Config::from_default_file_or_empty(),
     }?;
 
-    // TODO: wrap everything underneath here in a function of which the result get's logged
+    // Run the application
+    lib::run(config).await.map_err(|err| {
+        error!("Application crashed: {}", err);
 
-    // Setup the application state.
-    let appstate = Data::new(AppState::from_config(&config)?);
-
-    // Define the API spec
-    let mut spec = DefaultApiRaw::default();
-    spec.info = Info {
-        version: clap::crate_version!().to_string(),
-        title: clap::crate_name!().to_string(),
-        description: Some(clap::crate_description!().to_string()),
-        ..Default::default()
-    };
-
-    // Start the Tor server
-    Ok(HttpServer::new(move || {
-        App::new()
-            // Attach the database
-            .app_data(appstate.clone())
-            // Use the default logging service
-            .wrap(Logger::default())
-            // Use the paperclip API service
-            .wrap_api_with_spec(spec.clone())
-            // Configure the routes and services
-            .configure(app::router)
-            // Expose the JSON OpenAPI spec
-            .with_json_spec_at("/api/spec")
-            // Paperclip requires us to build the app
-            .build()
+        err
     })
-    // Disable TCP keep alive
-    .keep_alive(None)
-    // Bind to the Tor service using the port from the config
-    .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, config.server_port()))?
-    .run()
-    .await?)
 }

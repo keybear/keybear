@@ -24,7 +24,7 @@ use std::{
 use x25519_dalek::StaticSecret;
 
 /// The required HTTP header containing the client ID.
-const CLIENT_ID_HEADER: &str = "keybear-client-id";
+pub const CLIENT_ID_HEADER: &str = "keybear-client-id";
 
 /// Actix middleware for using X25519 encrypted JSON messages.
 #[derive(Debug, Default)]
@@ -124,9 +124,6 @@ where
                         // Use an empty string as the body
                         String::new()
                     };
-
-                    // TODO: decrypt incoming message
-                    dbg!(message);
 
                     // Construct the payload
                     let payload = {

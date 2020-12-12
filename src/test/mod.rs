@@ -1,6 +1,6 @@
 use crate::{
     app::{self, AppState},
-    crypto::StaticSecretExt,
+    crypto::{self, middleware::CLIENT_ID_HEADER, StaticSecretExt},
 };
 use actix_http::Request;
 use actix_service::ServiceFactory;
@@ -16,7 +16,7 @@ use actix_web::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, sync::Mutex};
-use x25519_dalek::StaticSecret;
+use x25519_dalek::{SharedSecret, StaticSecret};
 
 /// Generate a default app with all routes.
 pub fn fill_app<T, B>(app: App<T, B>) -> App<T, B>
@@ -65,6 +65,44 @@ where
 
     // Extract the JSON response
     test::read_body_json(resp).await
+}
+
+/// Perform a request without a body and get the result back.
+pub async fn perform_encrypted_request<S, B, E, T>(
+    app: &mut S,
+    path: &str,
+    method: Method,
+    client_id: &str,
+    shared_key: &SharedSecret,
+) -> T
+where
+    S: Service<Request = Request, Response = ServiceResponse<B>, Error = E>,
+    B: MessageBody + Unpin,
+    E: Debug,
+    T: DeserializeOwned,
+{
+    // Build a request to test our function
+    let req = TestRequest::with_uri(path)
+        .header(CLIENT_ID_HEADER, client_id)
+        .method(method)
+        // The peer address must be localhost otherwise the Tor guard triggers
+        .peer_addr("127.0.0.1:1234".parse().unwrap())
+        .to_request();
+
+    // Perform the request and get the response
+    let resp = app.call(req).await.unwrap();
+
+    // Ensure that the path is accessed correctly
+    assert!(resp.status().is_success());
+
+    // Extract the encrypted body
+    let body = test::read_body(resp).await;
+
+    // Decrypt it
+    let decrypted = crypto::decrypt(shared_key, &body).unwrap();
+
+    // Parse the JSON
+    serde_json::from_str(&decrypted).unwrap()
 }
 
 /// Perform a request with a body and get the result back.

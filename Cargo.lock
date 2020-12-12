@@ -1120,6 +1120,7 @@ dependencies = [
  "paperclip",
  "rand",
  "serde",
+ "serde_json",
  "syslog",
  "tempfile",
  "toml",

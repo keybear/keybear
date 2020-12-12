@@ -20,6 +20,7 @@ path = "src/lib.rs"
 actix-http = "2.2.0"
 actix-service = "1.0.6"
 actix-storage = { version = "0.1.1", features = ["serde-json"] }
+actix-storage-hashmap = "0.1.1"
 actix-storage-sled = "0.1.1"
 actix-web = "3.3.2"
 anyhow = "1.0.35"
@@ -39,17 +40,7 @@ x25519-dalek = { version = "1.1.0", features = ["serde"] }
 [dev-dependencies]
 actix-http = "2.2.0"
 actix-rt = "1.1.1"
-actix-storage-hashmap = "0.1.1"
 tempfile = "3.1.0"
-
-[features]
-# We have to define the test as a feature otherwise the module won't be exported
-test = []
-
-[[test]]
-name = "register"
-path = "tests/register.rs"
-required-features = ["test"]
 
 # Crash on panics instead of trying to mitigate the problems
 [profile.release]

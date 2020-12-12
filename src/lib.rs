@@ -7,7 +7,7 @@ pub mod device;
 pub mod net;
 pub mod password;
 pub mod store;
-#[cfg(any(feature = "test", test))]
+// Due to integration tests not taking `[cfg(test)]` this has to be exposed publicly
 pub mod test;
 
 use actix_web::{middleware::Logger, App, HttpServer};

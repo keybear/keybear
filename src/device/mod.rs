@@ -87,9 +87,9 @@ impl Device {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
 pub struct PublicDevice {
     /// Unique identifier.
-    id: String,
+    pub id: String,
     /// Name of the device.
-    name: String,
+    pub name: String,
 }
 
 /// A device registration struct.
@@ -102,6 +102,14 @@ pub struct RegisterDevice {
 }
 
 impl RegisterDevice {
+    /// Construct a new device.
+    pub fn new(name: &str, public_key: &PublicKey) -> Self {
+        Self {
+            name: name.to_string(),
+            public_key: base64::encode(public_key.as_bytes()),
+        }
+    }
+
     /// Convert this into a device struct that can be added to the database.
     pub fn to_device(&self) -> Result<Device> {
         // Read exactly the bytes from the public key
@@ -126,11 +134,11 @@ impl RegisterDevice {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
 pub struct RegisterDeviceResult {
     /// Unique identifier.
-    id: String,
+    pub id: String,
     /// Name of the device as configured by the user.
-    name: String,
+    pub name: String,
     /// The public key of the server.
-    server_public_key: String,
+    pub server_public_key: String,
 }
 
 /// Get a list of all device endpoints.
@@ -170,7 +178,7 @@ pub async fn register(
 
 #[cfg(test)]
 mod tests {
-    use super::{PublicDevice, RegisterDevice};
+    use super::{PublicDevice, RegisterDevice, RegisterDeviceResult};
     use actix_web::{http::Method, test, web, App};
 
     #[actix_rt::test]
@@ -206,7 +214,7 @@ mod tests {
         };
 
         // Register the device
-        let registered: PublicDevice =
+        let registered: RegisterDeviceResult =
             crate::test::perform_request_with_body(&mut app, "/register", Method::POST, &device)
                 .await;
         assert_eq!(registered.name, device.name);

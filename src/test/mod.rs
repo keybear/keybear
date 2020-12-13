@@ -1,13 +1,14 @@
 use crate::{
     app::{self, AppState},
     crypto::{self, middleware::CLIENT_ID_HEADER, StaticSecretExt},
+    device::{RegisterDevice, RegisterDeviceResult},
 };
 use actix_http::Request;
 use actix_service::ServiceFactory;
 use actix_storage::Storage;
 use actix_storage_hashmap::HashMapStore;
 use actix_web::{
-    body::MessageBody,
+    body::{Body, MessageBody},
     dev::{Service, ServiceRequest, ServiceResponse},
     http::Method,
     test::{self, TestRequest},
@@ -16,7 +17,7 @@ use actix_web::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, sync::Mutex};
-use x25519_dalek::{SharedSecret, StaticSecret};
+use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
 /// Generate a default app with all routes.
 pub fn fill_app<T, B>(app: App<T, B>) -> App<T, B>
@@ -40,6 +41,34 @@ pub fn app_state() -> Data<AppState> {
         // Use a simple in-memory hashmap storage
         storage: Mutex::new(Storage::build().store(HashMapStore::default()).finish()),
     })
+}
+
+/// Setup a server with a registered client.
+pub async fn setup_with_client() -> (
+    impl Service<Request = Request, Response = ServiceResponse<Body>, Error = Error>,
+    String,
+    SharedSecret,
+) {
+    // Setup the test service
+    let mut app = test::init_service(fill_app(App::new())).await;
+
+    // Create a public and a secret key for the device
+    let secret_key = StaticSecret::new_with_os_rand();
+    let public_key = PublicKey::from(&secret_key);
+
+    // Setup a fake device to register
+    let register_device = RegisterDevice::new("test_device", &public_key);
+
+    // Register the device
+    let registered: RegisterDeviceResult =
+        perform_request_with_body(&mut app, "/v1/register", Method::POST, &register_device).await;
+    assert_eq!(registered.name, "test_device");
+
+    // Create a shared key from the result
+    let shared_key = secret_key.diffie_hellman(&registered.server_public_key().unwrap());
+
+    // Return the app, the device ID and the shared key
+    (app, registered.id, shared_key)
 }
 
 /// Perform a request without a body and get the result back.
@@ -140,4 +169,50 @@ where
 
     // Extract the JSON response
     test::read_body_json(resp).await
+}
+
+/// Perform a request with a body and get the result back.
+pub async fn perform_encrypted_request_with_body<S, B, E, J, T>(
+    app: &mut S,
+    path: &str,
+    method: Method,
+    client_id: &str,
+    shared_key: &SharedSecret,
+    json_body: &J,
+) -> T
+where
+    S: Service<Request = Request, Response = ServiceResponse<B>, Error = E>,
+    B: MessageBody + Unpin,
+    J: Serialize,
+    E: Debug,
+    T: DeserializeOwned,
+{
+    // Build a request to test our function
+    let req = TestRequest::with_uri(path)
+        .method(method)
+        .header(CLIENT_ID_HEADER, client_id)
+        .set_json(json_body)
+        // The peer address must be localhost otherwise the Tor guard triggers
+        .peer_addr("127.0.0.1:1234".parse().unwrap())
+        .to_request();
+
+    // Perform the request and get the response
+    let resp = app.call(req).await.unwrap();
+
+    // Ensure that the path is accessed correctly
+    assert!(
+        resp.status().is_success(),
+        "Incorrect response status \"{}\" with body: {:?}",
+        resp.status().canonical_reason().unwrap(),
+        test::read_body(resp).await,
+    );
+
+    // Extract the encrypted body
+    let body = test::read_body(resp).await;
+
+    // Decrypt it
+    let decrypted = crypto::decrypt(shared_key, &body).unwrap();
+
+    // Parse the JSON
+    serde_json::from_str(&decrypted).unwrap()
 }

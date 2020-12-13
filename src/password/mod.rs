@@ -27,16 +27,16 @@ impl Passwords {
 }
 
 /// A password entry.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
 pub struct Password {
     /// Name of the password as configured by the user.
-    name: String,
+    pub name: String,
     /// The actual password.
-    password: String,
+    pub password: String,
     /// The e-mail associated.
-    email: Option<String>,
+    pub email: Option<String>,
     /// The website associated.
-    website: Option<String>,
+    pub website: Option<String>,
 }
 
 /// Get a list of all passwords.

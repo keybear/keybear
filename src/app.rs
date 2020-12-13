@@ -72,6 +72,28 @@ impl AppState {
     }
 }
 
+/// Create the actix app with all routes and services.
+pub fn router(cfg: &mut ServiceConfig) {
+    cfg.service(
+        web::scope("/v1")
+            // This is the only call that's allowed to be done unencrypted
+            .service(web::resource("/register").route(web::post().to(device::register)))
+            .service(
+                web::resource("/devices")
+                    .route(web::get().to(device::devices))
+                    .wrap(Encrypted::default()),
+            )
+            .service(
+                web::resource("/passwords")
+                    .route(web::get().to(password::get_passwords))
+                    .route(web::post().to(password::post_passwords))
+                    .wrap(Encrypted::default()),
+            )
+            // Ensure that the communication is only going through the Tor service
+            .guard(TorGuard),
+    );
+}
+
 /// Create the server app.
 pub fn fill_app<T, B>(app: App<T, B>, app_state: &Data<AppState>) -> App<T, B>
 where
@@ -104,30 +126,4 @@ where
         .with_json_spec_at("/api/spec")
         // Paperclip requires us to build the app
         .build()
-}
-
-/// Create the actix app with all routes and services.
-pub fn router(cfg: &mut ServiceConfig) {
-    cfg.service(
-        web::scope("/v1")
-            // This is the only call that's allowed to be done unencrypted
-            .service(web::resource("/register").route(web::post().to(device::register)))
-            .service(
-                web::resource("/devices")
-                    .route(web::get().to(device::devices))
-                    .wrap(Encrypted::default()),
-            )
-            .service(
-                web::resource("/passwords")
-                    .route(web::get().to(password::get_passwords))
-                    .wrap(Encrypted::default()),
-            )
-            .service(
-                web::resource("/passwords")
-                    .route(web::post().to(password::post_passwords))
-                    .wrap(Encrypted::default()),
-            )
-            // Ensure that the communication is only going through the Tor service
-            .guard(TorGuard),
-    );
 }

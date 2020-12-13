@@ -97,7 +97,6 @@ where
                     CLIENT_ID_HEADER
                 )));
             };
-
             debug!("Received message from client with ID \"{:?}\"", id);
 
             if let Some(state) = req.app_data::<Data<AppState>>() {
@@ -115,6 +114,7 @@ where
                     }
 
                     // Decrypt the body if applicable and create a new payload
+                    /*
                     let message = if !body.is_empty() {
                         // Decrypt the message contained in the body
                         device
@@ -124,6 +124,7 @@ where
                         // Use an empty string as the body
                         String::new()
                     };
+                    */
 
                     // Construct the payload
                     let payload = {

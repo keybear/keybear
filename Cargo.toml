@@ -28,6 +28,7 @@ base64 = "0.13.0"
 chacha20poly1305 = "0.7.1"
 clap = "3.0.0-beta.2"
 futures = "0.3.8"
+futures-util = "0.3.8"
 log = "0.4.11"
 paperclip = { version = "0.5.0", features = ["actix"] }
 rand = "0.7.3"

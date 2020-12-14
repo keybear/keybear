@@ -3,7 +3,7 @@ use lib::password::Password;
 
 #[actix_rt::test]
 async fn save() {
-    // Setup the server and post a single client
+    // Setup the server and register a single client
     let (mut app, client_id, shared_key) = lib::test::setup_with_client().await;
 
     // Create a password to save

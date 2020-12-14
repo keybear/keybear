@@ -1,3 +1,4 @@
+pub mod json;
 pub mod middleware;
 
 use anyhow::{anyhow, bail, Result};

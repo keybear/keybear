@@ -1,5 +1,4 @@
 use crate::{app::AppState, device::Device};
-use actix_http::{h1::Payload as H1Payload, Payload};
 use actix_service::{Service, Transform};
 use actix_web::{
     body::Body,
@@ -104,41 +103,6 @@ where
                 let secret_key = state.secret_key.clone();
 
                 if let Some(device) = state.devices().await?.find(id) {
-                    // Split it into the HTTP request and the payload
-                    let (http_request, mut payload) = req.into_parts();
-
-                    // Capture the request body to encrypt it
-                    let mut body = BytesMut::new();
-                    while let Some(chunk) = payload.next().await {
-                        body.extend_from_slice(&chunk?);
-                    }
-
-                    // Decrypt the body if applicable and create a new payload
-                    /*
-                    let message = if !body.is_empty() {
-                        // Decrypt the message contained in the body
-                        device
-                            .decrypt(&secret_key, &body)
-                            .map_err(|err| ErrorUnauthorized(err))?
-                    } else {
-                        // Use an empty string as the body
-                        String::new()
-                    };
-                    */
-
-                    // Construct the payload
-                    let payload = {
-                        let mut payload = H1Payload::empty();
-                        payload.unread_data(body.freeze());
-
-                        Payload::H1(payload)
-                    };
-
-                    // Reconstruct the request
-                    let req = ServiceRequest::from_parts(http_request, payload)
-                        .map_err(|_| ErrorInternalServerError("Cannot reconstruct request"))?;
-
-                    // Handle the request
                     let res = service.call(req).await?;
 
                     // Encrypt the response

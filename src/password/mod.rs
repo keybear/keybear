@@ -1,4 +1,4 @@
-use crate::app::AppState;
+use crate::{app::AppState, crypto::json::EncryptedJson};
 use actix_web::Result;
 use paperclip::actix::{
     api_v2_operation,
@@ -57,7 +57,7 @@ pub async fn get_passwords(state: Data<AppState>) -> Result<Json<Passwords>> {
 /// Register a new password.
 #[api_v2_operation]
 pub async fn post_passwords(
-    password: Json<Password>,
+    password: EncryptedJson<Password>,
     state: Data<AppState>,
 ) -> Result<CreatedJson<Password>> {
     // Get a mutex lock on the storage
@@ -79,58 +79,4 @@ pub async fn post_passwords(
     storage.set("passwords", &passwords).await?;
 
     Ok(CreatedJson(password))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Password, Passwords};
-    use actix_web::{http::Method, test, web, App};
-
-    #[actix_rt::test]
-    async fn passwords() {
-        let mut app = test::init_service(
-            App::new()
-                .service(web::resource("/passwords").route(web::get().to(super::get_passwords)))
-                .app_data(crate::test::app_state()),
-        )
-        .await;
-
-        // Request the passwords, empty list should be returned
-        let passwords: Passwords =
-            crate::test::perform_request(&mut app, "/passwords", Method::GET).await;
-        assert_eq!(passwords.amount(), 0);
-    }
-
-    #[actix_rt::test]
-    async fn register() {
-        let mut app = test::init_service(
-            App::new()
-                .service(
-                    web::resource("/passwords")
-                        .route(web::get().to(super::get_passwords))
-                        .route(web::post().to(super::post_passwords)),
-                )
-                .app_data(crate::test::app_state()),
-        )
-        .await;
-
-        // Setup a password to get the JSON from
-        let password = Password {
-            name: "test".to_string(),
-            password: "test_password".to_string(),
-            email: None,
-            website: None,
-        };
-
-        // Register the password
-        let registered: Password =
-            crate::test::perform_request_with_body(&mut app, "/passwords", Method::POST, &password)
-                .await;
-        assert_eq!(registered, password);
-
-        // Verify that the list of passwords is filled with it
-        let passwords: Passwords =
-            crate::test::perform_request(&mut app, "/passwords", Method::GET).await;
-        assert_eq!(passwords.amount(), 1);
-    }
 }

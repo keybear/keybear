@@ -1,6 +1,6 @@
 use crate::{
     app::{self, AppState},
-    crypto::{self, middleware::CLIENT_ID_HEADER, StaticSecretExt},
+    crypto::{self, json::EncryptedJson, middleware::CLIENT_ID_HEADER, StaticSecretExt},
     device::{RegisterDevice, RegisterDeviceResult},
 };
 use actix_http::Request;
@@ -187,11 +187,14 @@ where
     E: Debug,
     T: DeserializeOwned,
 {
+    // Create an encrypted JSON payload
+    let payload = EncryptedJson::new(json_body).to_bytes(shared_key).unwrap();
+
     // Build a request to test our function
     let req = TestRequest::with_uri(path)
         .method(method)
         .header(CLIENT_ID_HEADER, client_id)
-        .set_json(json_body)
+        .set_payload(payload)
         // The peer address must be localhost otherwise the Tor guard triggers
         .peer_addr("127.0.0.1:1234".parse().unwrap())
         .to_request();

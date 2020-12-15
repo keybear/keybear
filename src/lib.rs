@@ -38,3 +38,45 @@ pub async fn run(config: Config) -> Result<()> {
     .run()
     .await?)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{config::Config, crypto::StaticSecretExt};
+    use anyhow::Result;
+    use x25519_dalek::StaticSecret;
+
+    #[actix_rt::test]
+    async fn invalid_key_path() -> Result<()> {
+        let config = Config::from_str("key_path = \"/non-existing/path\"")?;
+        assert!(super::run(config).await.is_err());
+
+        Ok(())
+    }
+
+    #[actix_rt::test]
+    async fn invalid_database_path() -> Result<()> {
+        // Create a temporary directory for the test database
+        let dir = tempfile::tempdir()?;
+        // Create the temporary file to save the key in
+        let file = dir.path().join("key");
+
+        // Generate a new pair of keys.
+        let secret = StaticSecret::new_with_os_rand();
+
+        // Save the secret key
+        secret.save(&file)?;
+
+        // Create the config with the valid key
+        let config = Config::from_str(&format!(
+            r#"
+            key_path = "{}"
+            database_path = "/non-existing/path"
+            "#,
+            file.to_str().unwrap(),
+        ))?;
+        // The database should now not be able to be created
+        assert!(super::run(config).await.is_err());
+
+        Ok(())
+    }
+}

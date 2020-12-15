@@ -24,4 +24,16 @@ async fn save() {
     )
     .await;
     assert_eq!(password, created);
+
+    // Now verify it's in the list of passwords
+    let passwords: Vec<Password> = lib::test::perform_encrypted_request(
+        &mut app,
+        "/v1/passwords",
+        Method::GET,
+        &client_id,
+        &shared_key,
+    )
+    .await;
+    assert_eq!(passwords.len(), 1);
+    assert_eq!(passwords[0].name, created.name);
 }

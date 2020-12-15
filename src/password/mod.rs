@@ -20,9 +20,9 @@ impl Passwords {
         self.passwords.push(password);
     }
 
-    /// Get the amount of passwords registered.
-    pub fn amount(&self) -> usize {
-        self.passwords.len()
+    /// Get a vector of passwords as allowed to be shown to the clients.
+    pub fn to_public_vec(&self) -> Vec<Password> {
+        self.passwords.clone()
     }
 }
 
@@ -41,7 +41,7 @@ pub struct Password {
 
 /// Get a list of all passwords.
 #[api_v2_operation]
-pub async fn get_passwords(state: Data<AppState>) -> Result<Json<Passwords>> {
+pub async fn get_passwords(state: Data<AppState>) -> Result<Json<Vec<Password>>> {
     // Get the passwords from the database or use the default
     let passwords = state
         .storage
@@ -51,7 +51,7 @@ pub async fn get_passwords(state: Data<AppState>) -> Result<Json<Passwords>> {
         .await?
         .unwrap_or_else(Passwords::default);
 
-    Ok(Json(passwords))
+    Ok(Json(passwords.to_public_vec()))
 }
 
 /// Register a new password.

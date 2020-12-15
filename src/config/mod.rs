@@ -157,6 +157,9 @@ mod tests {
         assert_eq!(config.database_path(), Path::new("some_other_path"));
         assert_eq!(config.server_port(), 1234);
 
+        // Verify that we get errors when an invalid config is used
+        assert!(Config::from_str("*invalid*").is_err());
+
         Ok(())
     }
 }

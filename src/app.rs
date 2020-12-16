@@ -89,6 +89,11 @@ pub fn router(cfg: &mut ServiceConfig) {
                     .route(web::post().to(password::post_passwords))
                     .wrap(Encrypted::default()),
             )
+            .service(
+                web::resource("/passwords/{id}")
+                    .route(web::get().to(password::get_password))
+                    .wrap(Encrypted::default()),
+            )
             // Ensure that the communication is only going through the Tor service
             .guard(TorGuard),
     );

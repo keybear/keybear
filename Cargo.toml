@@ -1,7 +1,7 @@
 [package]
 name = "keybear"
 version = "0.1.0"
-authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
+authors = ["Thomas Versteeg <thomas@versteeg.email>"]
 license = "AGPL-3.0-or-later"
 edition = "2018"
 readme = "README.md"
@@ -23,7 +23,7 @@ actix-storage = { version = "0.1.1", features = ["serde-json"] }
 actix-storage-hashmap = "0.1.1"
 actix-storage-sled = "0.1.1"
 actix-web = "3.3.2"
-anyhow = "1.0.35"
+anyhow = "1.0.36"
 base64 = "0.13.0"
 chacha20poly1305 = "0.7.1"
 clap = "3.0.0-beta.2"
@@ -31,11 +31,11 @@ futures = "0.3.8"
 futures-util = "0.3.8"
 log = "0.4.11"
 paperclip = { version = "0.5.0", features = ["actix"] }
-rand = "0.7.3"
+rand = "0.8.0"
 serde = { version = "1.0.118", features = ["derive"] }
 serde_json = "1.0.60"
 syslog = "5.0.0"
-toml = "0.5.7"
+toml = "0.5.8"
 uuid = { version = "0.8.1", features = ["v4"] }
 x25519-dalek = { version = "1.1.0", features = ["serde"] }
 

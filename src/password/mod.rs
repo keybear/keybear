@@ -1,15 +1,14 @@
-use crate::{app::AppState, crypto::json::EncryptedJson};
-use actix_web::{error::ErrorNotFound, Result};
-use paperclip::actix::{
-    api_v2_operation,
-    web::{Data, Json, Path},
-    Apiv2Schema, CreatedJson,
+use crate::{app::AppState, body::EncryptedBody};
+use actix_web::{
+    error::ErrorNotFound,
+    web::{Data, Path},
+    Result,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// All the passwords.
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Passwords {
     /// The passwords.
     passwords: Vec<Password>,
@@ -33,7 +32,7 @@ impl Passwords {
 }
 
 /// A password entry.
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RegisterPassword {
     /// Name of the password as configured by the user.
     pub name: String,
@@ -62,7 +61,7 @@ impl RegisterPassword {
 }
 
 /// A password entry.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Password {
     /// Unique identifier.
     pub id: String,
@@ -77,11 +76,10 @@ pub struct Password {
 }
 
 /// Get a single password.
-#[api_v2_operation]
 pub async fn get_password(
     Path((id,)): Path<(String,)>,
     state: Data<AppState>,
-) -> Result<Json<Password>> {
+) -> Result<EncryptedBody<Password>> {
     // Get the passwords from the database or use the default
     let passwords = state
         .storage
@@ -93,7 +91,7 @@ pub async fn get_password(
 
     // Find the specific password
     match passwords.by_id(&id) {
-        Some(password) => Ok(Json(password.clone())),
+        Some(password) => Ok(EncryptedBody::new(password.clone())),
         None => Err(ErrorNotFound(format!(
             "Password with ID \"{}\" does not exist",
             id
@@ -102,8 +100,7 @@ pub async fn get_password(
 }
 
 /// Get a list of all passwords.
-#[api_v2_operation]
-pub async fn get_passwords(state: Data<AppState>) -> Result<Json<Vec<Password>>> {
+pub async fn get_passwords(state: Data<AppState>) -> Result<EncryptedBody<Vec<Password>>> {
     // Get the passwords from the database or use the default
     let passwords = state
         .storage
@@ -113,15 +110,14 @@ pub async fn get_passwords(state: Data<AppState>) -> Result<Json<Vec<Password>>>
         .await?
         .unwrap_or_else(Passwords::default);
 
-    Ok(Json(passwords.to_public_vec()))
+    Ok(EncryptedBody::new(passwords.to_public_vec()))
 }
 
 /// Register a new password.
-#[api_v2_operation]
 pub async fn post_passwords(
-    password: EncryptedJson<RegisterPassword>,
+    password: EncryptedBody<RegisterPassword>,
     state: Data<AppState>,
-) -> Result<CreatedJson<Password>> {
+) -> Result<EncryptedBody<Password>> {
     // Get a mutex lock on the storage
     let storage = state.storage.lock().unwrap();
 
@@ -140,5 +136,5 @@ pub async fn post_passwords(
     // Persist the passwords in the storage
     storage.set("passwords", &passwords).await?;
 
-    Ok(CreatedJson(password))
+    Ok(EncryptedBody::new(password))
 }

@@ -1,7 +1,8 @@
 use actix_web::{http::Method, test, App};
+use keybear_core::crypto::StaticSecretExt;
 use lib::{
-    crypto::StaticSecretExt,
     device::{PublicDevice, RegisterDevice, RegisterDeviceResult},
+    test::TestClient,
 };
 use x25519_dalek::{PublicKey, StaticSecret};
 
@@ -18,7 +19,7 @@ async fn register() {
     let register_device = RegisterDevice::new("test_device", &public_key);
 
     // Register the device
-    let registered: RegisterDeviceResult = lib::test::perform_request_with_body(
+    let registered: RegisterDeviceResult = TestClient::perform_request_with_body(
         &mut app,
         "/v1/register",
         Method::POST,
@@ -27,18 +28,17 @@ async fn register() {
     .await;
     assert_eq!(registered.name, "test_device");
 
-    // Create a shared key from the result
-    let shared_key = secret_key.diffie_hellman(&registered.server_public_key().unwrap());
+    // Create a test client from the results
+    let client = TestClient {
+        id: registered.id.clone(),
+        server_public_key: registered.server_public_key().unwrap(),
+        client_secret_key: secret_key,
+    };
 
     // Now verify it's in the list of devices
-    let devices: Vec<PublicDevice> = lib::test::perform_encrypted_request(
-        &mut app,
-        "/v1/devices",
-        Method::GET,
-        &registered.id,
-        &shared_key,
-    )
-    .await;
+    let devices: Vec<PublicDevice> = client
+        .perform_encrypted_request(&mut app, "/v1/devices", Method::GET)
+        .await;
     assert_eq!(devices.len(), 1);
     assert_eq!(devices[0].id, registered.id);
 }

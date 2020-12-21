@@ -1,12 +1,12 @@
-use crate::{app::AppState, crypto};
-use actix_web::{error::ErrorInternalServerError, Result as WebResult};
-use anyhow::{anyhow, Context, Result};
-use paperclip::actix::{
-    api_v2_operation,
+use crate::{app::AppState, body::EncryptedBody};
+use actix_web::{
+    error::ErrorInternalServerError,
     web::{Data, Json},
-    Apiv2Schema, CreatedJson,
+    Result as WebResult,
 };
-use serde::{Deserialize, Serialize};
+use anyhow::{anyhow, Context, Result};
+use keybear_core::crypto;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::convert::TryInto;
 use uuid::Uuid;
 use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
@@ -24,7 +24,7 @@ impl Devices {
         self.devices.push(device);
     }
 
-    /// Check if a device with the ID exists.
+    /// Get a device with the ID.
     pub fn find(&self, id: &str) -> Option<&Device> {
         // Find the device by ID
         self.devices.iter().find(|device| device.id == id)
@@ -68,23 +68,29 @@ impl Device {
         }
     }
 
-    /// Encrypt a message to send.
-    pub fn encrypt(&self, server_key: &StaticSecret, message: &str) -> Result<Vec<u8>> {
-        crypto::encrypt(&self.shared_key(server_key), message)
+    /// Encrypt a object to send.
+    pub fn encrypt<T>(&self, server_key: &StaticSecret, obj: &T) -> Result<Vec<u8>>
+    where
+        T: Serialize,
+    {
+        crypto::encrypt(&self.shared_key(server_key), obj)
     }
 
     /// Decrypt a message to receive.
-    pub fn decrypt(&self, server_key: &StaticSecret, cipher_bytes: &[u8]) -> Result<String> {
+    pub fn decrypt<T>(&self, server_key: &StaticSecret, cipher_bytes: &[u8]) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
         crypto::decrypt(&self.shared_key(server_key), cipher_bytes)
     }
 
     /// Get the shared key to communicate with this device.
-    fn shared_key(&self, server_key: &StaticSecret) -> SharedSecret {
+    pub fn shared_key(&self, server_key: &StaticSecret) -> SharedSecret {
         server_key.diffie_hellman(&self.public_key)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PublicDevice {
     /// Unique identifier.
     pub id: String,
@@ -93,7 +99,7 @@ pub struct PublicDevice {
 }
 
 /// A device registration struct.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RegisterDevice {
     /// Name of the device as configured by the user.
     name: String,
@@ -131,7 +137,7 @@ impl RegisterDevice {
 }
 
 /// The result from successfully registering a device.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Apiv2Schema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RegisterDeviceResult {
     /// Unique identifier.
     pub id: String,
@@ -155,19 +161,28 @@ impl RegisterDeviceResult {
 }
 
 /// Get a list of all device endpoints.
-#[api_v2_operation]
-pub async fn devices(state: Data<AppState>) -> WebResult<Json<Vec<PublicDevice>>> {
-    Ok(Json(state.devices().await?.to_public_vec()))
+pub async fn devices(state: Data<AppState>) -> WebResult<EncryptedBody<Vec<PublicDevice>>> {
+    Ok(EncryptedBody::new(
+        state
+            .devices()
+            .await
+            // Convert the anyhow error to an internal server error
+            .map_err(|err| ErrorInternalServerError(err))?
+            .to_public_vec(),
+    ))
 }
 
 /// Register a new device endpoint.
-#[api_v2_operation]
 pub async fn register(
     register_device: Json<RegisterDevice>,
     state: Data<AppState>,
-) -> WebResult<CreatedJson<RegisterDeviceResult>> {
+) -> WebResult<Json<RegisterDeviceResult>> {
     // Get the list of devices from the state
-    let mut devices = state.devices().await?;
+    let mut devices = state
+        .devices()
+        .await
+        // Convert the anyhow error to an internal server error
+        .map_err(|err| ErrorInternalServerError(err))?;
 
     // Extract the device from the JSON
     let register_device = register_device.into_inner();
@@ -184,7 +199,5 @@ pub async fn register(
     state.set_devices(devices).await?;
 
     // Return a view of the device
-    Ok(CreatedJson(
-        device.to_register_device_result(&state.secret_key),
-    ))
+    Ok(Json(device.to_register_device_result(&state.secret_key)))
 }

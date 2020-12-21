@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 
 pub mod app;
+pub mod body;
 pub mod config;
-pub mod crypto;
 pub mod device;
 pub mod net;
 pub mod password;
@@ -10,11 +10,10 @@ pub mod store;
 // Due to integration tests not taking `[cfg(test)]` this has to be exposed publicly
 pub mod test;
 
-use actix_web::{middleware::Logger, App, HttpServer};
+use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use anyhow::Result;
 use app::AppState;
 use config::Config;
-use paperclip::actix::web::Data;
 use std::net::{Ipv4Addr, SocketAddrV4};
 
 /// Run the keybear server.
@@ -41,8 +40,9 @@ pub async fn run(config: Config) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{config::Config, crypto::StaticSecretExt};
+    use crate::config::Config;
     use anyhow::Result;
+    use keybear_core::crypto::StaticSecretExt;
     use x25519_dalek::StaticSecret;
 
     #[actix_rt::test]

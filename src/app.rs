@@ -1,8 +1,6 @@
 use crate::{
     config::Config,
-    crypto::{middleware::Encrypted, StaticSecretExt},
-    device,
-    device::Devices,
+    device::{self, Device, Devices},
     net::TorGuard,
     password,
     store::StorageBuilder,
@@ -12,16 +10,11 @@ use actix_storage::Storage;
 use actix_web::{
     body::MessageBody,
     dev::{ServiceRequest, ServiceResponse},
+    web::{self, Data, ServiceConfig},
     App, Error, Result as WebResult,
 };
-use anyhow::Result;
-use paperclip::{
-    actix::{
-        web::{self, Data, ServiceConfig},
-        OpenApiExt,
-    },
-    v2::models::{DefaultApiRaw, Info},
-};
+use anyhow::{anyhow, Result};
+use keybear_core::crypto::StaticSecretExt;
 use std::sync::Mutex;
 use x25519_dalek::StaticSecret;
 
@@ -60,15 +53,26 @@ impl AppState {
     }
 
     /// Get the devices from the database.
-    pub async fn devices(&self) -> WebResult<Devices> {
+    pub async fn devices(&self) -> Result<Devices> {
         // Get a mutex lock on the storage
         let storage = self.storage.lock().unwrap();
 
         // Get the devices from the database or use the default
         Ok(storage
             .get("devices")
-            .await?
+            .await
+            .map_err(|err| anyhow!("Could not get devices from storage: {}", err))?
             .unwrap_or_else(Devices::default))
+    }
+
+    /// Get the device information from the database.
+    pub async fn device(&self, device_id: &str) -> Result<Device> {
+        // Try to find the device or throw an error when it's not found
+        self.devices()
+            .await?
+            .find(device_id)
+            .map(|device| device.clone())
+            .ok_or_else(|| anyhow!("Device with ID \"{}\" is not registered"))
     }
 }
 
@@ -78,22 +82,13 @@ pub fn router(cfg: &mut ServiceConfig) {
         web::scope("/v1")
             // This is the only call that's allowed to be done unencrypted
             .service(web::resource("/register").route(web::post().to(device::register)))
-            .service(
-                web::resource("/devices")
-                    .route(web::get().to(device::devices))
-                    .wrap(Encrypted::default()),
-            )
+            .service(web::resource("/devices").route(web::get().to(device::devices)))
             .service(
                 web::resource("/passwords")
                     .route(web::get().to(password::get_passwords))
-                    .route(web::post().to(password::post_passwords))
-                    .wrap(Encrypted::default()),
+                    .route(web::post().to(password::post_passwords)),
             )
-            .service(
-                web::resource("/passwords/{id}")
-                    .route(web::get().to(password::get_password))
-                    .wrap(Encrypted::default()),
-            )
+            .service(web::resource("/passwords/{id}").route(web::get().to(password::get_password)))
             // Ensure that the communication is only going through the Tor service
             .guard(TorGuard),
     );
@@ -111,24 +106,9 @@ where
         InitError = (),
     >,
 {
-    // Define the API spec
-    let mut spec = DefaultApiRaw::default();
-    spec.info = Info {
-        version: clap::crate_version!().to_string(),
-        title: clap::crate_name!().to_string(),
-        description: Some(clap::crate_description!().to_string()),
-        ..Default::default()
-    };
-
     app
         // Attach the database
         .app_data(app_state.clone())
-        // Use the paperclip API service
-        .wrap_api_with_spec(spec.clone())
         // Configure the routes and services
         .configure(router)
-        // Expose the JSON OpenAPI spec
-        .with_json_spec_at("/api/spec")
-        // Paperclip requires us to build the app
-        .build()
 }

@@ -85,7 +85,7 @@ where
     }
 
     /// Serialize it to bytes.
-    pub fn to_bytes(self) -> Result<Bytes> {
+    pub fn into_bytes(self) -> Result<Bytes> {
         match self.key {
             Some(key) => {
                 // Encrypt the object

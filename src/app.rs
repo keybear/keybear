@@ -71,7 +71,7 @@ impl AppState {
         self.devices()
             .await?
             .find(device_id)
-            .map(|device| device.clone())
+            .cloned()
             .ok_or_else(|| anyhow!("Device with ID \"{}\" is not registered"))
     }
 }

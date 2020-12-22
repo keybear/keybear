@@ -1,7 +1,6 @@
 use crate::{
     app::{self, AppState},
     body::EncryptedBody,
-    device::{RegisterDevice, RegisterDeviceResult},
 };
 use actix_http::Request;
 use actix_service::ServiceFactory;
@@ -17,6 +16,7 @@ use actix_web::{
 };
 use keybear_core::{
     crypto::{self, StaticSecretExt},
+    types::{RegisterDeviceRequest, RegisterDeviceResponse},
     CLIENT_ID_HEADER,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -47,23 +47,23 @@ impl TestClient {
         let public_key = PublicKey::from(&secret_key);
 
         // Setup a fake device to register
-        let register_device = RegisterDevice::new("test_device", &public_key);
+        let register_device = RegisterDeviceRequest::new("test_device", &public_key);
 
         // Register the device
-        let registered: RegisterDeviceResult = TestClient::perform_request_with_body(
+        let registered: RegisterDeviceResponse = TestClient::perform_request_with_body(
             &mut app,
             "/v1/register",
             Method::POST,
             &register_device,
         )
         .await;
-        assert_eq!(registered.name, "test_device");
+        assert_eq!(registered.name(), "test_device");
 
         // Return the app, the device ID and the device public key
         (
             app,
             Self {
-                id: registered.id.clone(),
+                id: registered.id().to_string(),
                 client_secret_key: secret_key,
                 server_public_key: registered.server_public_key().unwrap(),
             },
@@ -121,7 +121,7 @@ impl TestClient {
     {
         // Create an encrypted JSON payload
         let payload = EncryptedBody::new_with_key(body, self.to_shared_secret())
-            .to_bytes()
+            .into_bytes()
             .unwrap();
 
         // Build a request to test our function

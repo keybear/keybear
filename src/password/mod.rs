@@ -4,8 +4,14 @@ use actix_web::{
     web::{Data, Path},
     Result,
 };
+use keybear_core::types::{PasswordResponse, PublicPassword, RegisterPasswordRequest};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+/// Allow converting an incoming message to a device.
+trait ToPassword {
+    fn to_password(&self) -> Password;
+}
 
 /// All the passwords.
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -21,8 +27,8 @@ impl Passwords {
     }
 
     /// Get a vector of passwords as allowed to be shown to the clients.
-    pub fn to_public_vec(&self) -> Vec<Password> {
-        self.passwords.clone()
+    pub fn to_public_vec(&self) -> Vec<PublicPassword> {
+        self.passwords.iter().map(|pass| pass.to_public()).collect()
     }
 
     /// Get a password by ID.
@@ -31,31 +37,18 @@ impl Passwords {
     }
 }
 
-/// A password entry.
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RegisterPassword {
-    /// Name of the password as configured by the user.
-    pub name: String,
-    /// The actual password.
-    pub password: String,
-    /// The e-mail associated.
-    pub email: Option<String>,
-    /// The website associated.
-    pub website: Option<String>,
-}
-
-impl RegisterPassword {
+impl ToPassword for RegisterPasswordRequest {
     /// Convert this into a password struct that can be added to the database.
-    pub fn to_password(&self) -> Password {
+    fn to_password(&self) -> Password {
         // Generate a new unique identifier
         let id = Uuid::new_v4().to_simple().to_string();
 
         Password {
             id,
-            name: self.name.clone(),
-            password: self.password.clone(),
-            email: self.email.clone(),
-            website: self.website.clone(),
+            name: self.name().to_string(),
+            password: self.password().to_string(),
+            email: self.email().map(|s| s.to_string()),
+            website: self.website().map(|s| s.to_string()),
         }
     }
 }
@@ -75,11 +68,28 @@ pub struct Password {
     pub website: Option<String>,
 }
 
+impl Password {
+    /// Convert it to a message response.
+    pub fn to_response(&self) -> PasswordResponse {
+        PasswordResponse::new(&self.password)
+    }
+
+    /// Convert it to a public password, without the actual password.
+    pub fn to_public(&self) -> PublicPassword {
+        PublicPassword::new(
+            &self.id,
+            &self.name,
+            self.email.as_ref(),
+            self.website.as_ref(),
+        )
+    }
+}
+
 /// Get a single password.
 pub async fn get_password(
     Path((id,)): Path<(String,)>,
     state: Data<AppState>,
-) -> Result<EncryptedBody<Password>> {
+) -> Result<EncryptedBody<PasswordResponse>> {
     // Get the passwords from the database or use the default
     let passwords = state
         .storage
@@ -91,7 +101,7 @@ pub async fn get_password(
 
     // Find the specific password
     match passwords.by_id(&id) {
-        Some(password) => Ok(EncryptedBody::new(password.clone())),
+        Some(password) => Ok(EncryptedBody::new(password.to_response())),
         None => Err(ErrorNotFound(format!(
             "Password with ID \"{}\" does not exist",
             id
@@ -100,7 +110,7 @@ pub async fn get_password(
 }
 
 /// Get a list of all passwords.
-pub async fn get_passwords(state: Data<AppState>) -> Result<EncryptedBody<Vec<Password>>> {
+pub async fn get_passwords(state: Data<AppState>) -> Result<EncryptedBody<Vec<PublicPassword>>> {
     // Get the passwords from the database or use the default
     let passwords = state
         .storage
@@ -115,9 +125,9 @@ pub async fn get_passwords(state: Data<AppState>) -> Result<EncryptedBody<Vec<Pa
 
 /// Register a new password.
 pub async fn post_passwords(
-    password: EncryptedBody<RegisterPassword>,
+    password: EncryptedBody<RegisterPasswordRequest>,
     state: Data<AppState>,
-) -> Result<EncryptedBody<Password>> {
+) -> Result<EncryptedBody<PublicPassword>> {
     // Get a mutex lock on the storage
     let storage = state.storage.lock().unwrap();
 
@@ -136,5 +146,5 @@ pub async fn post_passwords(
     // Persist the passwords in the storage
     storage.set("passwords", &passwords).await?;
 
-    Ok(EncryptedBody::new(password))
+    Ok(EncryptedBody::new(password.to_public()))
 }

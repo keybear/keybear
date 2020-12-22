@@ -57,11 +57,11 @@ impl Config {
         let contents = fs::read_to_string(file)
             .map_err(|err| anyhow!("Reading configuration file {:?} failed: {}", file, err))?;
 
-        Self::from_str(&contents)
+        Self::from_raw_str(&contents)
     }
 
     /// Create the config from a string with all defaults filled.
-    pub fn from_str(toml: &str) -> Result<Self> {
+    pub fn from_raw_str(toml: &str) -> Result<Self> {
         toml::from_str(&toml)
             .map_err(|err| anyhow!("Reading keybear configuration failed: {}", err))
     }
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn defaults() -> Result<()> {
-        let config = Config::from_str("")?;
+        let config = Config::from_raw_str("")?;
         // The default values should be the same as loading from an empty string
         assert_eq!(config, Config::default());
 
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn from_toml() -> Result<()> {
-        let config = Config::from_str(
+        let config = Config::from_raw_str(
             r#"
             key_path = "some_path"
             database_path = "some_other_path"
@@ -158,7 +158,7 @@ mod tests {
         assert_eq!(config.server_port(), 1234);
 
         // Verify that we get errors when an invalid config is used
-        assert!(Config::from_str("*invalid*").is_err());
+        assert!(Config::from_raw_str("*invalid*").is_err());
 
         Ok(())
     }

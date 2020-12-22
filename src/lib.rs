@@ -47,7 +47,7 @@ mod tests {
 
     #[actix_rt::test]
     async fn invalid_key_path() -> Result<()> {
-        let config = Config::from_str("key_path = \"/non-existing/path\"")?;
+        let config = Config::from_raw_str("key_path = \"/non-existing/path\"")?;
         assert!(super::run(config).await.is_err());
 
         Ok(())
@@ -67,7 +67,7 @@ mod tests {
         secret.save(&file)?;
 
         // Create the config with the valid key
-        let config = Config::from_str(&format!(
+        let config = Config::from_raw_str(&format!(
             r#"
             key_path = "{}"
             database_path = "/non-existing/path"

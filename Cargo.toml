@@ -31,7 +31,7 @@ futures = "0.3.8"
 futures-util = "0.3.8"
 keybear-core = "0.1.0"
 log = "0.4.11"
-rand_core = { version = "0.5.0", default-features = false }
+rand_core = { version = "0.6.0", default-features = false }
 serde = { version = "1.0.118", features = ["derive"] }
 serde_json = "1.0.60"
 syslog = "5.0.0"

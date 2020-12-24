@@ -195,9 +195,9 @@
 </code></pre>
 <h2><a class="header" href="#configure-tor" id="configure-tor">Configure Tor</a></h2>
 <p>Let Tor load our configuration for the onion service, add the following line to <code>/etc/tor/torrc</code>:</p>
-<pre><code class="language-conf">%include /etc/tor/torrc.d/keybear.conf
+<pre><code class="language-conf">%include /etc/keybear/torrc
 </code></pre>
-<pre><code class="language-bash">echo &quot;%include /etc/tor/torrc.d/keybear.conf&quot; | sudo tee -a /etc/tor/torrc
+<pre><code class="language-bash">echo &quot;%include /etc/keybear/torrc&quot; | sudo tee -a /etc/tor/torrc
 </code></pre>
 <p>Restart the Tor service to enable the hidden service:</p>
 <pre><code class="language-bash">sudo systemctl restart tor.service
@@ -215,7 +215,9 @@
 <p>A Rust installation is required for this step.  Installation instructions can be found here: <a href="https://rustup.rs/">rustup.rs</a></p>
 <h2><a class="header" href="#cargo-1" id="cargo-1">Cargo</a></h2>
 <p>Install the package using Cargo:</p>
-<pre><code class="language-bash">cargo install keybear
+<pre><code class="language-bash">git clone https://github.com/keybear/keybear.git
+cd keybear
+cargo install
 </code></pre>
 <h2><a class="header" href="#tor" id="tor">Tor</a></h2>
 <p>Install Tor:</p>

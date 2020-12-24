@@ -190,9 +190,9 @@
 </code></pre>
 <h2><a class="header" href="#configure-tor" id="configure-tor">Configure Tor</a></h2>
 <p>Let Tor load our configuration for the onion service, add the following line to <code>/etc/tor/torrc</code>:</p>
-<pre><code class="language-conf">%include /etc/tor/torrc.d/keybear.conf
+<pre><code class="language-conf">%include /etc/keybear/torrc
 </code></pre>
-<pre><code class="language-bash">echo &quot;%include /etc/tor/torrc.d/keybear.conf&quot; | sudo tee -a /etc/tor/torrc
+<pre><code class="language-bash">echo &quot;%include /etc/keybear/torrc&quot; | sudo tee -a /etc/tor/torrc
 </code></pre>
 <p>Restart the Tor service to enable the hidden service:</p>
 <pre><code class="language-bash">sudo systemctl restart tor.service

@@ -51,6 +51,6 @@ depends = "$auto, tor"
 maintainer-scripts = "debian/"
 assets = [
 	["target/release/keybear", "/usr/bin/", "755"],
-	["debian/tor-service.conf", "/etc/tor/torrc.d/keybear.conf", "644"]
+	["debian/tor-service.conf", "/etc/keybear/torrc", "644"]
 ]
 systemd-units = { enable = true }

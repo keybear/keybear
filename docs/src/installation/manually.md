@@ -9,7 +9,9 @@ A Rust installation is required for this step.  Installation instructions can be
 Install the package using Cargo:
 
 ```bash
-cargo install keybear
+git clone https://github.com/keybear/keybear.git
+cd keybear
+cargo install
 ```
 
 ## Tor

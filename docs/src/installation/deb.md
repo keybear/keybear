@@ -44,11 +44,11 @@ sudo systemctl status keybear.service
 Let Tor load our configuration for the onion service, add the following line to `/etc/tor/torrc`:
 
 ```conf
-%include /etc/tor/torrc.d/keybear.conf
+%include /etc/keybear/torrc
 ```
 
 ```bash
-echo "%include /etc/tor/torrc.d/keybear.conf" | sudo tee -a /etc/tor/torrc
+echo "%include /etc/keybear/torrc" | sudo tee -a /etc/tor/torrc
 ```
 
 Restart the Tor service to enable the hidden service:

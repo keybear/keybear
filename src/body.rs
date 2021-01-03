@@ -6,16 +6,18 @@ use actix_web::{
     Error, FromRequest, HttpRequest, HttpResponse, Responder,
 };
 use anyhow::{anyhow, bail, Result};
-use futures::executor::block_on;
+use futures::{executor::block_on, Future};
 use futures_util::{
     future::{self, Ready},
-    StreamExt,
+    FutureExt, StreamExt,
 };
 use keybear_core::{crypto, CLIENT_ID_HEADER};
+use log::debug;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult},
     ops::{Deref, DerefMut},
+    pin::Pin,
 };
 use x25519_dalek::SharedSecret;
 
@@ -52,23 +54,6 @@ where
     /// Deconstruct to an inner value.
     pub fn into_inner(self) -> T {
         self.data
-    }
-
-    /// Decrypt a request body.
-    async fn decrypt_request(id: &str, state: &AppState, body: BytesMut) -> Result<Self> {
-        // Find the device from the ID
-        let device = state.device(id).await?;
-
-        // Decrypt the message contained in the body
-        let data = device.decrypt(&state.secret_key, &body)?;
-
-        // Get a shared key from the device
-        let shared_key = device.shared_key(&state.secret_key);
-
-        Ok(Self {
-            data,
-            key: Some(shared_key),
-        })
     }
 }
 
@@ -135,37 +120,55 @@ where
     T: DeserializeOwned + 'static,
 {
     type Error = Error;
-    type Future = Ready<Result<EncryptedBody<T>, Error>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>> + 'static>>;
     type Config = ();
 
     #[inline]
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        // Get the app state and the client ID from the request
-        let (id, state) = match request_id_and_app_state(req) {
-            Ok(ok) => ok,
-            Err(err) => return future::err(ErrorUnauthorized(err)),
-        };
+        // Clone the request so it can be sent to the async block
+        let req = req.clone();
 
-        // Capture the request body to decrypt it
-        let mut body = BytesMut::new();
-        while let Some(chunk) = block_on(payload.next()) {
-            match chunk {
-                Ok(chunk) => body.extend_from_slice(&chunk),
-                Err(err) => {
-                    return future::err(ErrorInternalServerError(format!(
-                        "Could not read chunk from payload: {}",
-                        err
-                    )))
-                }
-            }
-        }
+        // Take the payload so it can be send to the async block
+        let mut payload = payload.take();
 
         // Try to decrypt the request
-        // TODO: change this to a proper future instead of block_on
-        match block_on(Self::decrypt_request(&id, state, body)) {
-            Ok(result) => future::ready(Ok(result)),
-            Err(err) => future::err(ErrorInternalServerError(err)),
+        async move {
+            debug!("Received encrypted request to path \"{}\"", req.path());
+
+            // Get the app state and the client ID from the request
+            let (id, state) =
+                request_id_and_app_state(&req).map_err(|err| ErrorUnauthorized(err))?;
+
+            debug!("Found matching client from request");
+
+            // Capture the request body to decrypt it
+            let mut body = BytesMut::new();
+            while let Some(chunk) = payload.next().await {
+                body.extend_from_slice(&chunk?);
+            }
+
+            debug!("Received body payload of {} bytes", body.len());
+
+            // Find the device from the ID
+            let device = state
+                .device(&id)
+                .await
+                .map_err(|err| ErrorUnauthorized(err))?;
+
+            // Decrypt the message contained in the body
+            let data = device
+                .decrypt(&state.secret_key, &body)
+                .map_err(|err| ErrorInternalServerError(err))?;
+
+            // Get a shared key from the device
+            let shared_key = device.shared_key(&state.secret_key);
+
+            Ok(Self {
+                data,
+                key: Some(shared_key),
+            })
         }
+        .boxed_local()
     }
 }
 
@@ -191,7 +194,8 @@ where
     }
 }
 
-pub fn request_id_and_app_state(req: &HttpRequest) -> Result<(String, &AppState)> {
+/// Get the request ID and the app state object reference from an HTTP request.
+fn request_id_and_app_state(req: &HttpRequest) -> Result<(String, &AppState)> {
     let headers = req.headers();
 
     // Try to find the client ID header

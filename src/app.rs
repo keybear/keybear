@@ -72,7 +72,7 @@ impl AppState {
             .await?
             .find(device_id)
             .cloned()
-            .ok_or_else(|| anyhow!("Device with ID \"{}\" is not registered"))
+            .ok_or_else(|| anyhow!("Device with ID \"{}\" is not registered", device_id))
     }
 }
 

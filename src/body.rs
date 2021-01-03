@@ -136,8 +136,7 @@ where
             debug!("Received encrypted request to path \"{}\"", req.path());
 
             // Get the app state and the client ID from the request
-            let (id, state) =
-                request_id_and_app_state(&req).map_err(|err| ErrorUnauthorized(err))?;
+            let (id, state) = request_id_and_app_state(&req).map_err(ErrorUnauthorized)?;
 
             debug!("Found matching client from request");
 
@@ -150,17 +149,15 @@ where
             debug!("Received body payload of {} bytes", body.len());
 
             // Find the device from the ID
-            let device = state
-                .device(&id)
-                .await
-                .map_err(|err| ErrorUnauthorized(err))?;
+            let device = state.device(&id).await.map_err(ErrorUnauthorized)?;
 
             // Decrypt the message contained in the body
             let data = device
                 .decrypt(&state.secret_key, &body)
-                .map_err(|err| ErrorInternalServerError(err))?;
+                .map_err(ErrorInternalServerError)?;
 
-            // Get a shared key from the device
+            // Get a shared key from the device, this will be passed so an encrypted response can
+            // be sent back
             let shared_key = device.shared_key(&state.secret_key);
 
             Ok(Self {

@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    device::{self, Device, Devices},
+    device::{self, Device, Devices, VerificationDevices},
     net::TorGuard,
     password,
     store::StorageBuilder,
@@ -74,6 +74,30 @@ impl AppState {
             .cloned()
             .ok_or_else(|| anyhow!("Device with ID \"{}\" is not registered", device_id))
     }
+
+    /// Set the devices that are awaiting verification.
+    pub async fn set_verification_devices(&self, devices: VerificationDevices) -> WebResult<()> {
+        // Get a mutex lock on the storage
+        let storage = self.storage.lock().unwrap();
+
+        // Persist the devices in the storage
+        storage.set("verification_devices", &devices).await?;
+
+        Ok(())
+    }
+
+    /// Get the devices that are awaiting verification from the database.
+    pub async fn verification_devices(&self) -> Result<VerificationDevices> {
+        // Get a mutex lock on the storage
+        let storage = self.storage.lock().unwrap();
+
+        // Get the devices from the database or use the default
+        Ok(storage
+            .get("verification_devices")
+            .await
+            .map_err(|err| anyhow!("Could not get verification devices from storage: {}", err))?
+            .unwrap_or_else(VerificationDevices::default))
+    }
 }
 
 /// Create the actix app with all routes and services.
@@ -82,6 +106,8 @@ pub fn router(cfg: &mut ServiceConfig) {
         web::scope("/v1")
             // This is the only call that's allowed to be done unencrypted
             .service(web::resource("/register").route(web::post().to(device::register)))
+            .service(web::resource("/verify").route(web::post().to(device::verify)))
+            .service(web::resource("/verification_devices").route(web::get().to(device::devices)))
             .service(web::resource("/devices").route(web::get().to(device::devices)))
             .service(
                 web::resource("/passwords")

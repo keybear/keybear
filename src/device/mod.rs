@@ -1,19 +1,14 @@
 pub mod register;
 
 use crate::{app::AppState, body::EncryptedBody};
-use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError, ErrorNotFound},
-    web::{Data, Json},
-    Result as WebResult,
-};
-use anyhow::{anyhow, Context, Result};
+use actix_web::{error::ErrorInternalServerError, web::Data, Result as WebResult};
+use anyhow::Result;
 use keybear_core::{
     crypto,
-    types::{NeedsVerificationDevice, PublicDevice, RegisterDeviceRequest, RegisterDeviceResponse},
+    types::{PublicDevice, RegisterDeviceResponse},
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::convert::TryInto;
-use uuid::Uuid;
+
 use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
 /// Allow converting an incoming message to a device.

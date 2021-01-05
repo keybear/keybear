@@ -1,7 +1,7 @@
 use crate::{
     app::AppState,
     body::EncryptedBody,
-    device::{Device, Devices, ToDevice},
+    device::{Device, ToDevice},
 };
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorNotFound},
@@ -9,14 +9,11 @@ use actix_web::{
     Result as WebResult,
 };
 use anyhow::{anyhow, Context, Result};
-use keybear_core::{
-    crypto,
-    types::{NeedsVerificationDevice, PublicDevice, RegisterDeviceRequest, RegisterDeviceResponse},
-};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use keybear_core::types::{NeedsVerificationDevice, RegisterDeviceRequest, RegisterDeviceResponse};
+use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use uuid::Uuid;
-use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
+use x25519_dalek::PublicKey;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VerificationCode(String);
@@ -141,6 +138,9 @@ pub async fn register(
     if devices.is_empty() {
         // This is the first device, no need to verify it
         devices.register(device.clone());
+
+        // Set the devices
+        state.set_devices(devices).await?;
 
         // TODO: return a different device type
         Ok(Json(

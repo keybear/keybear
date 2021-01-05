@@ -120,9 +120,10 @@ impl TestClient {
         T: DeserializeOwned,
     {
         // Create an encrypted JSON payload
-        let payload = EncryptedBody::new_with_key(body, self.to_shared_secret())
-            .into_bytes()
-            .unwrap();
+        let payload =
+            EncryptedBody::new_with_key_and_client_id(body, self.to_shared_secret(), &self.id)
+                .into_bytes()
+                .unwrap();
 
         // Build a request to test our function
         let req = TestRequest::with_uri(path)

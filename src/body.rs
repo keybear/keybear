@@ -23,27 +23,47 @@ use x25519_dalek::SharedSecret;
 
 /// A payload that's encrypted by the client.
 pub struct EncryptedBody<T> {
+    /// The serializable payload.
+    data: T,
     /// The shared key to encrypt the message.
     ///
     /// For decryption it's not required that this has a value.
     /// The value will be filled by the HTTP request.
     key: Option<SharedSecret>,
-    /// The serializable payload.
-    data: T,
+    /// The client identifier.
+    ///
+    /// For decryption it's not required that this has a value.
+    /// The value will be filled by the HTTP request.
+    client_id: Option<String>,
 }
 
 impl<T> EncryptedBody<T> {
     /// Construct a new object without a key.
     pub fn new(data: T) -> Self {
-        Self { data, key: None }
+        Self {
+            data,
+            key: None,
+            client_id: None,
+        }
     }
 
     /// Construct a new object with a key.
-    pub fn new_with_key(data: T, key: SharedSecret) -> Self {
+    pub fn new_with_key_and_client_id<S>(data: T, key: SharedSecret, client_id: S) -> Self
+    where
+        S: Into<String>,
+    {
         Self {
             data,
             key: Some(key),
+            client_id: Some(client_id.into()),
         }
+    }
+
+    /// Get the client ID, can only be retrieved from requests.
+    pub fn client_id(&self) -> Result<&str> {
+        self.client_id
+            .as_deref()
+            .ok_or_else(|| anyhow!("Client ID not set on encrypted body"))
     }
 }
 
@@ -54,6 +74,15 @@ where
     /// Deconstruct to an inner value.
     pub fn into_inner(self) -> T {
         self.data
+    }
+
+    /// Deconstruct to an inner value with the ID attached.
+    pub fn into_inner_with_client_id(self) -> Result<(T, String)> {
+        Ok((
+            self.data,
+            self.client_id
+                .ok_or_else(|| anyhow!("Client ID not set on encrypted body"))?,
+        ))
     }
 }
 
@@ -163,6 +192,7 @@ where
             Ok(Self {
                 data,
                 key: Some(shared_key),
+                client_id: Some(id),
             })
         }
         .boxed_local()
@@ -191,7 +221,7 @@ where
     }
 }
 
-/// Get the request ID and the app state object reference from an HTTP request.
+/// Get the requesting client ID and the app state object reference from an HTTP request.
 fn request_id_and_app_state(req: &HttpRequest) -> Result<(String, &AppState)> {
     let headers = req.headers();
 

@@ -1,6 +1,10 @@
 use crate::{
     config::Config,
-    device::{self, Device, Devices, VerificationDevices},
+    device::{
+        self,
+        register::{self, VerificationDevices},
+        Device, Devices,
+    },
     net::TorGuard,
     password,
     store::StorageBuilder,
@@ -105,8 +109,8 @@ pub fn router(cfg: &mut ServiceConfig) {
     cfg.service(
         web::scope("/v1")
             // This is the only call that's allowed to be done unencrypted
-            .service(web::resource("/register").route(web::post().to(device::register)))
-            .service(web::resource("/verify").route(web::post().to(device::verify)))
+            .service(web::resource("/register").route(web::post().to(register::register)))
+            .service(web::resource("/verify").route(web::post().to(register::verify)))
             .service(web::resource("/verification_devices").route(web::get().to(device::devices)))
             .service(web::resource("/devices").route(web::get().to(device::devices)))
             .service(

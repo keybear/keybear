@@ -1,12 +1,7 @@
 use crate::{
     config::Config,
-    device::{
-        self,
-        register::{self, VerificationDevices},
-        Device, Devices,
-    },
-    net::TorGuard,
-    password,
+    device::{register::VerificationDevices, Device, Devices},
+    route,
     store::StorageBuilder,
 };
 use actix_service::ServiceFactory;
@@ -14,7 +9,7 @@ use actix_storage::Storage;
 use actix_web::{
     body::MessageBody,
     dev::{ServiceRequest, ServiceResponse},
-    web::{self, Data, ServiceConfig},
+    web::Data,
     App, Error, Result as WebResult,
 };
 use anyhow::{anyhow, Result};
@@ -104,26 +99,6 @@ impl AppState {
     }
 }
 
-/// Create the actix app with all routes and services.
-pub fn router(cfg: &mut ServiceConfig) {
-    cfg.service(
-        web::scope("/v1")
-            // This is the only call that's allowed to be done unencrypted
-            .service(web::resource("/register").route(web::post().to(register::register)))
-            .service(web::resource("/verify").route(web::post().to(register::verify)))
-            .service(web::resource("/verification_devices").route(web::get().to(device::devices)))
-            .service(web::resource("/devices").route(web::get().to(device::devices)))
-            .service(
-                web::resource("/passwords")
-                    .route(web::get().to(password::get_passwords))
-                    .route(web::post().to(password::post_passwords)),
-            )
-            .service(web::resource("/passwords/{id}").route(web::get().to(password::get_password)))
-            // Ensure that the communication is only going through the Tor service
-            .guard(TorGuard),
-    );
-}
-
 /// Create the server app.
 pub fn fill_app<T, B>(app: App<T, B>, app_state: &Data<AppState>) -> App<T, B>
 where
@@ -140,5 +115,5 @@ where
         // Attach the database
         .app_data(app_state.clone())
         // Configure the routes and services
-        .configure(router)
+        .configure(route::router)
 }

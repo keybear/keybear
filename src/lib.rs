@@ -6,6 +6,7 @@ pub mod config;
 pub mod device;
 pub mod net;
 pub mod password;
+pub mod route;
 pub mod store;
 // Due to integration tests not taking `[cfg(test)]` this has to be exposed publicly
 pub mod test;

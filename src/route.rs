@@ -4,22 +4,29 @@ use crate::{
     password,
 };
 use actix_web::web::{self, ServiceConfig};
+use keybear_core::route::v1;
 
 /// Create the actix app with all routes and services.
 pub fn router(cfg: &mut ServiceConfig) {
     cfg.service(
         web::scope("/v1")
             // This is the only call that's allowed to be done unencrypted
-            .service(web::resource("/register").route(web::post().to(register::register)))
-            .service(web::resource("/verify").route(web::post().to(register::verify)))
-            .service(web::resource("/verification_devices").route(web::get().to(device::devices)))
-            .service(web::resource("/devices").route(web::get().to(device::devices)))
+            .service(web::resource(v1::REGISTER).route(web::post().to(register::register)))
+            .service(web::resource(v1::VERIFY).route(web::post().to(register::verify)))
             .service(
-                web::resource("/passwords")
+                web::resource(v1::VERIFICATION_DEVICES)
+                    .route(web::get().to(register::verification_devices)),
+            )
+            .service(web::resource(v1::DEVICES).route(web::get().to(device::devices)))
+            .service(
+                web::resource(v1::PASSWORD)
                     .route(web::get().to(password::get_passwords))
                     .route(web::post().to(password::post_passwords)),
             )
-            .service(web::resource("/passwords/{id}").route(web::get().to(password::get_password)))
+            .service(
+                web::resource(format!("{}/{{id}}", v1::PASSWORD))
+                    .route(web::get().to(password::get_password)),
+            )
             // Ensure that the communication is only going through the Tor service
             .guard(TorGuard),
     );

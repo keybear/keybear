@@ -16,6 +16,7 @@ use actix_web::{
 };
 use keybear_core::{
     crypto::{self, StaticSecretExt},
+    route::v1,
     types::{RegisterDeviceRequest, RegisterDeviceResponse},
     CLIENT_ID_HEADER,
 };
@@ -52,7 +53,7 @@ impl TestClient {
         // Register the device
         let registered: RegisterDeviceResponse = TestClient::perform_request_with_body(
             &mut app,
-            "/v1/register",
+            v1::REGISTER,
             Method::POST,
             &register_device,
         )

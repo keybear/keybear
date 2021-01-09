@@ -16,18 +16,13 @@ async fn save() {
 
     // Save the password
     let created: PublicPassword = client
-        .perform_encrypted_request_with_body(
-            &mut app,
-            &format!("/v1{}", v1::PASSWORD),
-            Method::POST,
-            &password,
-        )
+        .perform_encrypted_request_with_body(&mut app, v1::PASSWORD, Method::POST, &password)
         .await;
     assert_eq!(password.name(), created.name());
 
     // Verify it's in the list of passwords
     let passwords: Vec<PublicPassword> = client
-        .perform_encrypted_request(&mut app, &format!("/v1{}", v1::PASSWORD), Method::GET)
+        .perform_encrypted_request(&mut app, v1::PASSWORD, Method::GET)
         .await;
     assert_eq!(passwords.len(), 1);
     assert_eq!(passwords[0].id(), created.id());
@@ -36,7 +31,7 @@ async fn save() {
     let stored_password: PasswordResponse = client
         .perform_encrypted_request(
             &mut app,
-            &format!("/v1{}/{}", v1::PASSWORD, created.id()),
+            &format!("{}/{}", v1::PASSWORD, created.id()),
             Method::GET,
         )
         .await;

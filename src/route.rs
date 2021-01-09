@@ -9,7 +9,7 @@ use keybear_core::route::v1;
 /// Create the actix app with all routes and services.
 pub fn router(cfg: &mut ServiceConfig) {
     cfg.service(
-        web::scope("/v1")
+        web::scope("/")
             // This is the only call that's allowed to be done unencrypted
             .service(web::resource(v1::REGISTER).route(web::post().to(register::register)))
             .service(web::resource(v1::VERIFY).route(web::post().to(register::verify)))

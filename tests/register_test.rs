@@ -22,7 +22,7 @@ async fn register() {
     // Register the device, the first device is always accepted
     let registered: RegisterDeviceResponse = TestClient::perform_request_with_body(
         &mut app,
-        &format!("/v1{}", v1::REGISTER),
+        v1::REGISTER,
         Method::POST,
         &register_device,
     )
@@ -46,7 +46,7 @@ async fn register() {
     // Register a new device, this device needs to be verified
     let registered2: RegisterDeviceResponse = TestClient::perform_request_with_body(
         &mut app,
-        &format!("/v1{}", v1::REGISTER),
+        v1::REGISTER,
         Method::POST,
         &register_device2,
     )
@@ -69,7 +69,7 @@ async fn register() {
     let _: () = client
         .perform_encrypted_request_with_body(
             &mut app,
-            &format!("/v1{}", v1::VERIFY),
+            v1::VERIFY,
             Method::POST,
             &verification_device,
         )
@@ -78,7 +78,7 @@ async fn register() {
     // Now verify they are both in the list of devices
     // Perform this request from the verified device to ensure that it has proper access
     let devices: Vec<PublicDevice> = client2
-        .perform_encrypted_request(&mut app, &format!("/v1{}", v1::DEVICES), Method::GET)
+        .perform_encrypted_request(&mut app, v1::DEVICES, Method::GET)
         .await;
     assert_eq!(devices.len(), 2);
     assert_eq!(devices[0].id(), registered.id());
@@ -101,7 +101,7 @@ async fn illegal_verify() {
     // Register the device
     let registered: RegisterDeviceResponse = TestClient::perform_request_with_body(
         &mut app,
-        &format!("/v1{}", v1::REGISTER),
+        v1::REGISTER,
         Method::POST,
         &register_device,
     )
@@ -124,7 +124,7 @@ async fn illegal_verify() {
     let _: () = client
         .perform_encrypted_request_with_body(
             &mut app,
-            &format!("/v1{}", v1::VERIFY),
+            v1::VERIFY,
             Method::POST,
             &verification_device,
         )

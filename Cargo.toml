@@ -31,7 +31,7 @@ futures = "0.3.9"
 futures-util = "0.3.9"
 keybear-core = "0.2.2"
 log = "0.4.11"
-serde = { version = "1.0.118", features = ["derive"] }
+serde = { version = "1.0.119", features = ["derive"] }
 serde_json = "1.0.61"
 syslog = "5.0.0"
 toml = "0.5.8"

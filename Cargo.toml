@@ -40,7 +40,7 @@ x25519-dalek = { version = "1.1.0", features = ["serde"] }
 
 [dev-dependencies]
 actix-rt = "1.1.1"
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 
 # Crash on panics instead of trying to mitigate the problems
 [profile.release]

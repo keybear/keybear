@@ -1225,9 +1225,9 @@ dependencies = [
 
 [[package]]
 name = "keybear-core"
-version = "0.2.2"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f413572e438bf986a15a8943e6b3461f958c20bf82e7203091e7c30d8c676a15"
+checksum = "ecce65ffc74e324d3d417aec3e86dacc356df71a0437eb36cf74cfb66a78e220"
 dependencies = [
  "anyhow",
  "base64",

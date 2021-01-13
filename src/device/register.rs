@@ -88,6 +88,7 @@ impl ToDevice for RegisterDeviceRequest {
             name: self.name().to_string(),
             id,
             public_key,
+            nonce: None,
         })
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    device::{self, register},
+    device::{self, nonce, register},
     net::TorGuard,
     password,
 };
@@ -10,8 +10,10 @@ use keybear_core::route::v1;
 pub fn router(cfg: &mut ServiceConfig) {
     cfg.service(
         web::scope("/")
-            // This is the only call that's allowed to be done unencrypted
+            // Unencrypted calls
             .service(web::resource(v1::REGISTER).route(web::post().to(register::register)))
+            .service(web::resource(v1::NONCE).route(web::post().to(nonce::nonce)))
+            // Encrypted calls
             .service(web::resource(v1::VERIFY).route(web::post().to(register::verify)))
             .service(
                 web::resource(v1::VERIFICATION_DEVICES)

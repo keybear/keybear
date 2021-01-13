@@ -11,7 +11,10 @@ use futures_util::{
     future::{self, Ready},
     FutureExt, StreamExt,
 };
-use keybear_core::{crypto, CLIENT_ID_HEADER};
+use keybear_core::{
+    crypto::{self, Nonce, SharedSecret},
+    CLIENT_ID_HEADER,
+};
 use log::debug;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
@@ -19,7 +22,6 @@ use std::{
     ops::{Deref, DerefMut},
     pin::Pin,
 };
-use x25519_dalek::SharedSecret;
 
 /// A payload that's encrypted by the client.
 pub struct EncryptedBody<T> {
@@ -99,11 +101,11 @@ where
     }
 
     /// Serialize it to bytes.
-    pub fn into_bytes(self) -> Result<Bytes> {
+    pub fn into_bytes(self, nonce: &Nonce) -> Result<Bytes> {
         match self.key {
             Some(key) => {
                 // Encrypt the object
-                let encrypted = crypto::encrypt(&key, &self.data)?;
+                let encrypted = crypto::encrypt(&key, &nonce, &self.data)?;
 
                 Ok(Bytes::from(encrypted))
             }

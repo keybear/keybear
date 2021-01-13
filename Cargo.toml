@@ -27,11 +27,12 @@ anyhow = "1.0.38"
 base64 = "0.13.0"
 chbs = "0.1.0"
 clap = "3.0.0-beta.2"
-futures = "0.3.9"
-futures-util = "0.3.9"
-keybear-core = "0.2.2"
-log = "0.4.11"
-serde = { version = "1.0.118", features = ["derive"] }
+futures = "0.3.10"
+futures-util = "0.3.10"
+keybear-core = "0.3.1"
+log = "0.4.13"
+rand = "0.8.2"
+serde = { version = "1.0.119", features = ["derive"] }
 serde_json = "1.0.61"
 syslog = "5.0.0"
 toml = "0.5.8"
@@ -40,7 +41,7 @@ x25519-dalek = { version = "1.1.0", features = ["serde"] }
 
 [dev-dependencies]
 actix-rt = "1.1.1"
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 
 # Crash on panics instead of trying to mitigate the problems
 [profile.release]

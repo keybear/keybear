@@ -1,12 +1,14 @@
+pub mod nonce;
 pub mod register;
 
 use crate::{app::AppState, body::EncryptedBody};
 use actix_web::{error::ErrorInternalServerError, web::Data, Result as WebResult};
-use anyhow::Result;
+use anyhow::{anyhow, bail, Result};
 use keybear_core::{
-    crypto,
+    crypto::{self, Nonce},
     types::{PublicDevice, RegisterDeviceResponse},
 };
+use nonce::SerializableNonce;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
@@ -58,6 +60,8 @@ pub struct Device {
     name: String,
     /// The public key of the device.
     public_key: PublicKey,
+    /// A single use nonce.
+    nonce: Option<SerializableNonce>,
 }
 
 impl Device {
@@ -80,12 +84,24 @@ impl Device {
         )
     }
 
+    /// Generate a nonce.
+    pub fn generate_nonce(&mut self) {
+        let random_bytes = rand::random::<[u8; 12]>();
+
+        let nonce = Nonce::from_slice(&random_bytes);
+
+        self.nonce = Some(SerializableNonce::from_nonce(nonce.clone()));
+    }
+
     /// Encrypt a object to send.
     pub fn encrypt<T>(&self, server_key: &StaticSecret, obj: &T) -> Result<Vec<u8>>
     where
         T: Serialize,
     {
-        crypto::encrypt(&self.shared_key(server_key), obj)
+        match &self.nonce {
+            Some(nonce) => crypto::encrypt(&self.shared_key(server_key), &nonce.to_nonce(), obj),
+            None => bail!("No nonce has been requested"),
+        }
     }
 
     /// Decrypt a message to receive.
@@ -93,12 +109,26 @@ impl Device {
     where
         T: DeserializeOwned,
     {
-        crypto::decrypt(&self.shared_key(server_key), cipher_bytes)
+        match &self.nonce {
+            Some(nonce) => crypto::decrypt(
+                &self.shared_key(server_key),
+                &nonce.to_nonce(),
+                cipher_bytes,
+            ),
+            None => bail!("No nonce has been requested"),
+        }
     }
 
     /// Get the shared key to communicate with this device.
     pub fn shared_key(&self, server_key: &StaticSecret) -> SharedSecret {
         server_key.diffie_hellman(&self.public_key)
+    }
+
+    /// Get the nonce, throw an error when it's not set.
+    pub fn nonce(&self) -> Result<&SerializableNonce> {
+        self.nonce
+            .as_ref()
+            .ok_or_else(|| anyhow!("No nonce generated yet"))
     }
 }
 

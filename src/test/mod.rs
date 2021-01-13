@@ -14,15 +14,15 @@ use actix_web::{
     web::Data,
     App, Error,
 };
+use anyhow::Result;
 use keybear_core::{
-    crypto::{self, StaticSecretExt},
+    crypto::{self, Nonce, PublicKey, SharedSecret, StaticSecret, StaticSecretExt},
     route::v1,
     types::{RegisterDeviceRequest, RegisterDeviceResponse},
     CLIENT_ID_HEADER,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, sync::Mutex};
-use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
 /// A client containing the keys to perform test requests.
 pub struct TestClient {
@@ -102,7 +102,12 @@ impl TestClient {
         let body = test::read_body(resp).await;
 
         // Decrypt it
-        crypto::decrypt(&self.to_shared_secret(), &body).unwrap()
+        crypto::decrypt(
+            &self.to_shared_secret(),
+            &self.nonce_request().await.unwrap(),
+            &body,
+        )
+        .unwrap()
     }
 
     /// Perform a request with a body and get the result back.
@@ -120,10 +125,13 @@ impl TestClient {
         E: Debug,
         T: DeserializeOwned,
     {
+        // Get the nonce
+        let nonce = self.nonce_request().await.unwrap();
+
         // Create an encrypted JSON payload
         let payload =
             EncryptedBody::new_with_key_and_client_id(body, self.to_shared_secret(), &self.id)
-                .into_bytes()
+                .into_bytes(&nonce)
                 .unwrap();
 
         // Build a request to test our function
@@ -150,7 +158,7 @@ impl TestClient {
         let body = test::read_body(resp).await;
 
         // Decrypt it
-        crypto::decrypt(&self.to_shared_secret(), &body).unwrap()
+        crypto::decrypt(&self.to_shared_secret(), &nonce, &body).unwrap()
     }
 
     /// Generate a shared secret key from the server and client keys.
@@ -219,6 +227,11 @@ impl TestClient {
 
         // Extract the JSON response
         test::read_body_json(resp).await
+    }
+
+    /// Perform a request that will return the nonce code.
+    async fn nonce_request(&self) -> Result<Nonce> {
+        unimplemented!()
     }
 }
 

@@ -12,7 +12,7 @@ pub fn router(cfg: &mut ServiceConfig) {
         web::scope("/")
             // Unencrypted calls
             .service(web::resource(v1::REGISTER).route(web::post().to(register::register)))
-            .service(web::resource(v1::NONCE).route(web::post().to(nonce::nonce)))
+            .service(web::resource(v1::NONCE).route(web::get().to(nonce::nonce)))
             // Encrypted calls
             .service(web::resource(v1::VERIFY).route(web::post().to(register::verify)))
             .service(

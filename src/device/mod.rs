@@ -5,9 +5,10 @@ use crate::{app::AppState, body::EncryptedBody};
 use actix_web::{error::ErrorInternalServerError, web::Data, Result as WebResult};
 use anyhow::{anyhow, bail, Result};
 use keybear_core::{
-    crypto::{self, Nonce},
+    crypto,
     types::{PublicDevice, RegisterDeviceResponse},
 };
+use log::debug;
 use nonce::SerializableNonce;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -35,6 +36,15 @@ impl Devices {
     pub fn find(&self, id: &str) -> Option<&Device> {
         // Find the device by ID
         self.devices.iter().find(|device| device.id == id)
+    }
+
+    /// Override a device.
+    pub fn set(&mut self, device: &Device) {
+        self.devices.iter_mut().for_each(|cached| {
+            if cached.id == device.id {
+                *cached = device.clone();
+            }
+        });
     }
 
     /// Get a vector of devices as allowed to be shown to the clients.
@@ -86,11 +96,9 @@ impl Device {
 
     /// Generate a nonce.
     pub fn generate_nonce(&mut self) {
-        let random_bytes = rand::random::<[u8; 12]>();
+        debug!("Generating nonce for device \"{}\"", self.id);
 
-        let nonce = Nonce::from_slice(&random_bytes);
-
-        self.nonce = Some(SerializableNonce::from_nonce(nonce.clone()));
+        self.nonce = Some(SerializableNonce::generate());
     }
 
     /// Encrypt a object to send.
@@ -100,7 +108,7 @@ impl Device {
     {
         match &self.nonce {
             Some(nonce) => crypto::encrypt(&self.shared_key(server_key), &nonce.to_nonce(), obj),
-            None => bail!("No nonce has been requested"),
+            None => bail!("Could not encrypt response because no nonce was saved for this device"),
         }
     }
 
@@ -115,7 +123,7 @@ impl Device {
                 &nonce.to_nonce(),
                 cipher_bytes,
             ),
-            None => bail!("No nonce has been requested"),
+            None => bail!("Could not decrypt request because no nonce was saved for this device"),
         }
     }
 

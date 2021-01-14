@@ -1,6 +1,7 @@
 use crate::{
     app::{self, AppState},
     body::EncryptedBody,
+    device::nonce::SerializableNonce,
 };
 use actix_http::Request;
 use actix_service::ServiceFactory;
@@ -16,7 +17,7 @@ use actix_web::{
 };
 use anyhow::Result;
 use keybear_core::{
-    crypto::{self, Nonce, PublicKey, SharedSecret, StaticSecret, StaticSecretExt},
+    crypto::{self, PublicKey, SharedSecret, StaticSecret, StaticSecretExt},
     route::v1,
     types::{RegisterDeviceRequest, RegisterDeviceResponse},
     CLIENT_ID_HEADER,
@@ -84,6 +85,9 @@ impl TestClient {
         E: Debug,
         T: DeserializeOwned,
     {
+        // Get the nonce
+        let nonce = self.nonce_request(app).await.unwrap();
+
         // Build a request to test our function
         let req = TestRequest::with_uri(path)
             .header(CLIENT_ID_HEADER, self.id.as_str())
@@ -102,12 +106,7 @@ impl TestClient {
         let body = test::read_body(resp).await;
 
         // Decrypt it
-        crypto::decrypt(
-            &self.to_shared_secret(),
-            &self.nonce_request().await.unwrap(),
-            &body,
-        )
-        .unwrap()
+        crypto::decrypt(&self.to_shared_secret(), &nonce.to_nonce(), &body).unwrap()
     }
 
     /// Perform a request with a body and get the result back.
@@ -126,12 +125,12 @@ impl TestClient {
         T: DeserializeOwned,
     {
         // Get the nonce
-        let nonce = self.nonce_request().await.unwrap();
+        let nonce = self.nonce_request(app).await.unwrap();
 
         // Create an encrypted JSON payload
         let payload =
             EncryptedBody::new_with_key_and_client_id(body, self.to_shared_secret(), &self.id)
-                .into_bytes(&nonce)
+                .into_bytes(&nonce.to_nonce())
                 .unwrap();
 
         // Build a request to test our function
@@ -158,7 +157,7 @@ impl TestClient {
         let body = test::read_body(resp).await;
 
         // Decrypt it
-        crypto::decrypt(&self.to_shared_secret(), &nonce, &body).unwrap()
+        crypto::decrypt(&self.to_shared_secret(), &nonce.to_nonce(), &body).unwrap()
     }
 
     /// Generate a shared secret key from the server and client keys.
@@ -230,8 +229,32 @@ impl TestClient {
     }
 
     /// Perform a request that will return the nonce code.
-    async fn nonce_request(&self) -> Result<Nonce> {
-        unimplemented!()
+    async fn nonce_request<S, B, E>(&self, app: &mut S) -> Result<SerializableNonce>
+    where
+        S: Service<Request = Request, Response = ServiceResponse<B>, Error = E>,
+        B: MessageBody + Unpin,
+        E: Debug,
+    {
+        // Build a request to test our function
+        let req = TestRequest::with_uri(v1::NONCE)
+            .method(Method::GET)
+            .header(CLIENT_ID_HEADER, self.id.as_str())
+            // The peer address must be localhost otherwise the Tor guard triggers
+            .peer_addr("127.0.0.1:1234".parse()?)
+            .to_request();
+
+        // Perform the request and get the response
+        let resp = app.call(req).await.unwrap();
+
+        // Ensure that the generation of the nonce succeeded
+        assert!(
+            resp.status().is_success(),
+            "Incorrect response status \"{}\" with body: {:?}",
+            resp.status().canonical_reason().unwrap(),
+            test::read_body(resp).await,
+        );
+
+        Ok(test::read_body_json(resp).await)
     }
 }
 

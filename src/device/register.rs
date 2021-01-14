@@ -141,7 +141,10 @@ pub async fn register(
         devices.register(device.clone());
 
         // Set the devices
-        state.set_devices(devices).await?;
+        state
+            .set_devices(devices)
+            .await
+            .map_err(ErrorInternalServerError)?;
 
         // TODO: return a different device type
         Ok(Json(
@@ -227,7 +230,10 @@ pub async fn verify(
 
     // Set the devices
     state.set_verification_devices(verification_devices).await?;
-    state.set_devices(devices).await?;
+    state
+        .set_devices(devices)
+        .await
+        .map_err(ErrorInternalServerError)?;
 
     // TODO: allow empty returns
     Ok(EncryptedBody::new(()))

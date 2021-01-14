@@ -41,12 +41,15 @@ impl AppState {
     }
 
     /// Set the devices.
-    pub async fn set_devices(&self, devices: Devices) -> WebResult<()> {
+    pub async fn set_devices(&self, devices: Devices) -> Result<()> {
         // Get a mutex lock on the storage
         let storage = self.storage.lock().unwrap();
 
         // Persist the devices in the storage
-        storage.set("devices", &devices).await?;
+        storage
+            .set("devices", &devices)
+            .await
+            .map_err(|err| anyhow!("Error setting devices on database: {}", err))?;
 
         Ok(())
     }
@@ -62,6 +65,22 @@ impl AppState {
             .await
             .map_err(|err| anyhow!("Could not get devices from storage: {}", err))?
             .unwrap_or_else(Devices::default))
+    }
+
+    /// Set the device.
+    pub async fn set_device(&self, device: &Device) -> Result<()> {
+        // TODO: improve this and make it a lot more efficient
+
+        // First get all the devices
+        let mut devices = self.devices().await?;
+
+        // Overwrite the device
+        devices.set(device);
+
+        // Set the devices again in the database
+        self.set_devices(devices).await?;
+
+        Ok(())
     }
 
     /// Get the device information from the database.

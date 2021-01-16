@@ -86,7 +86,7 @@ impl TestClient {
         T: DeserializeOwned,
     {
         // Get the nonce
-        let nonce = self.nonce_request(app).await.unwrap();
+        let nonce = self.perform_nonce_request(app).await.unwrap();
 
         // Build a request to test our function
         let req = TestRequest::with_uri(path)
@@ -125,7 +125,7 @@ impl TestClient {
         T: DeserializeOwned,
     {
         // Get the nonce
-        let nonce = self.nonce_request(app).await.unwrap();
+        let nonce = self.perform_nonce_request(app).await.unwrap();
 
         // Create an encrypted JSON payload
         let payload =
@@ -229,7 +229,7 @@ impl TestClient {
     }
 
     /// Perform a request that will return the nonce code.
-    async fn nonce_request<S, B, E>(&self, app: &mut S) -> Result<SerializableNonce>
+    pub async fn perform_nonce_request<S, B, E>(&self, app: &mut S) -> Result<SerializableNonce>
     where
         S: Service<Request = Request, Response = ServiceResponse<B>, Error = E>,
         B: MessageBody + Unpin,
@@ -255,6 +255,35 @@ impl TestClient {
         );
 
         Ok(test::read_body_json(resp).await)
+    }
+
+    /// Perform a request without a body and get the result back.
+    pub async fn perform_encrypted_request_without_nonce<S, B, E>(
+        &self,
+        app: &mut S,
+        path: &str,
+        method: Method,
+    ) where
+        S: Service<Request = Request, Response = ServiceResponse<B>, Error = E>,
+        B: MessageBody + Unpin,
+        E: Debug,
+    {
+        // Build a request to test our function
+        let req = TestRequest::with_uri(path)
+            .header(CLIENT_ID_HEADER, self.id.as_str())
+            .method(method)
+            // The peer address must be localhost otherwise the Tor guard triggers
+            .peer_addr("127.0.0.1:1234".parse().unwrap())
+            .to_request();
+
+        // Perform the request and get the response
+        let resp = app.call(req).await.unwrap();
+
+        // Ensure that the path is accessed correctly
+        assert!(resp.status().is_success());
+
+        // Extract the encrypted body
+        test::read_body(resp).await;
     }
 }
 

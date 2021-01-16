@@ -215,6 +215,8 @@ where
             Err(err) => return future::err(ErrorUnauthorized(err)),
         };
 
+        // TODO: clear the nonce
+
         // Encrypt the body
         match block_on(self.encrypt_request(&id, state)) {
             Ok(body) => future::ready(Ok(HttpResponse::Ok().body(body))),

@@ -8,7 +8,7 @@ use keybear_core::{
     crypto,
     types::{PublicDevice, RegisterDeviceResponse},
 };
-use log::debug;
+use log::{debug, trace};
 use nonce::SerializableNonce;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -99,6 +99,13 @@ impl Device {
         debug!("Generating nonce for device \"{}\"", self.id);
 
         self.nonce = Some(SerializableNonce::generate());
+    }
+
+    /// Reset the nonce so it a new one needs to be requested.
+    pub fn clear_nonce(&mut self) {
+        trace!("Clearing nonce for device \"{}\"", self.id);
+
+        self.nonce = None;
     }
 
     /// Encrypt a object to send.

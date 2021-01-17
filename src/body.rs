@@ -95,9 +95,19 @@ where
     /// Encrypt a request body.
     async fn encrypt_request(&self, id: &str, state: &AppState) -> Result<Vec<u8>> {
         // Find the device from the ID
-        let device = state.device(id).await?;
+        let mut device = state.device(id).await?;
 
-        device.encrypt(&state.secret_key, &self.data)
+        // Encrypt the result
+        let result = device.encrypt(&state.secret_key, &self.data)?;
+
+        // Clear the nonce
+        device.clear_nonce();
+
+        // Persist the device with the cleared nonce
+        state.set_device(&device).await?;
+
+        // Return the encrypted bytes
+        Ok(result)
     }
 
     /// Serialize it to bytes.
@@ -214,8 +224,6 @@ where
             Ok(ok) => ok,
             Err(err) => return future::err(ErrorUnauthorized(err)),
         };
-
-        // TODO: clear the nonce
 
         // Encrypt the body
         match block_on(self.encrypt_request(&id, state)) {

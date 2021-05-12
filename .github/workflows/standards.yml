@@ -36,19 +36,19 @@ jobs:
           components: rustfmt, clippy
 
       - name: cargo check
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v1.0.3
         with:
           command: check
           args: --all
 
       - name: cargo fmt
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v1.0.3
         with:
           command: fmt
           args: --all -- --check
 
       - name: cargo clippy
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v1.0.3
         with:
           command: clippy
           args: --all-targets --all-features -- -D clippy::all

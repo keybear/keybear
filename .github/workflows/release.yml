@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: download releases from github_build
-        uses: actions/download-artifact@v2.0.8
+        uses: actions/download-artifact@v2.0.10
         with:
           name: ${{ matrix.job.name }}
           path: .

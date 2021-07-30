@@ -33,7 +33,7 @@ keybear-core = "0.3.2"
 log = "0.4.14"
 rand = "0.8.3"
 serde = { version = "1.0.123", features = ["derive"] }
-serde_json = "1.0.62"
+serde_json = "1.0.66"
 syslog = "5.0.0"
 toml = "0.5.8"
 uuid = { version = "0.8.2", features = ["v4"] }

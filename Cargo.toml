@@ -17,7 +17,7 @@ name = "lib"
 path = "src/lib.rs"
 
 [dependencies]
-actix-http = "2.2.0"
+actix-http = "2.2.1"
 actix-service = "1.0.6"
 actix-storage = { version = "0.1.1", features = ["serde-json"] }
 actix-storage-hashmap = "0.1.1"

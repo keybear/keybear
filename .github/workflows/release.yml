@@ -50,7 +50,7 @@ jobs:
           cd -
 
       - name: upload build artifact
-        uses: actions/upload-artifact@v2.2.2
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: ${{ matrix.job.name }}
           path: ${{ matrix.job.name }}
